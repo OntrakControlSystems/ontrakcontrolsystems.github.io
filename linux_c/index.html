@@ -130,8 +130,6 @@
                         <p><font face="Arial">
     All source code is provided so that you may review details that
     are not highlighted here.</font></p>
-						<p>
-						Figure 1. AduHidTest&nbsp;C# Example (Visual Studio 2019)</p>
 						<hr />
 						<h3>
 						Lets have a look at the code......</h3>
@@ -266,7 +264,8 @@
 
     </pre></div>
 
-        <p>If reading from the device was successful, let's print out the data received and stored in data_result.</p>
+        <p>If reading from the device was successful, let's print out the data received and stored in data_result. It's important to note that the values returned from the ADU is an ASCII representation of the number. If you will be evaluating it as a number, the ASCII value will need to be converted to an integer.
+		This can be done using the C atoi() function (ASCII to Integer).</p>
 
 <div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
 <pre style="margin: 0; line-height: 125%">
