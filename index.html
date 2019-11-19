@@ -1,0 +1,353 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="en-ca" http-equiv="Content-Language" />
+<meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
+<!--ONTRAKS META TAGS FOR SEARCH ENGINE -->
+<meta Name="keywords" content=" acquisition, VB.NET, , visual studio 2019, vb.net control, usb visual basic, visual basic mscomm control, usb communications, usb communications visual basic, A/D, D/A, I/O, digital, analog,visual,basic automation, interface, serial, usb  " />
+<meta Name="description" content=" Guide to using Linux, C and libusb with USB based Data Acquisition products."/>
+<!-- ********************************** -->
+
+<link rel="stylesheet" type="text/css" href="ontrak.css" />
+<title>Using C and libusb with ADU USB Data Acquisition Products (Linux)</title>
+
+<link rel="stylesheet" type="text/css" href="css/ontrak.css">
+<link rel="stylesheet" type="text/css" href="css/ontrakCompat.css">
+<script>var isProgrammingPage = true;</script>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script src="js/externalLoad.js"></script>
+
+
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-30278418-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+
+
+
+<style type="text/css">
+.auto-style16 {
+	font-size: small;
+}
+.auto-style17 {
+	font-size: 18px;
+	color: #5E5E5E;
+}
+.auto-style18 {
+	font-family: Arial;
+	font-size: small;
+	font-weight: normal;
+	color: #000000;
+	height: auto;
+	text-align: left;
+}
+</style>
+
+
+
+</head>
+
+<body style="margin: 0; background-color: #FFFFFF">
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_header"></div>
+<!------------------------------------------->
+				
+<div class="contentMain pSpaceFix">
+
+<table align="left" cellpadding="0" cellspacing="0" class="ontrakZTableSetup" style="width: 1024px">
+	<tr>
+		<td valign="top">&nbsp;&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+		<table cellpadding="0" cellspacing="0" style="width: 1000px">
+			<tr>
+				<td>
+				
+
+				</td>
+			</tr>
+			<tr>
+				<td>&nbsp;&nbsp; &nbsp;</td>
+			</tr>
+			<tr>
+				<td>
+				<table cellspacing="1" style="width: 100%">
+					<tr class="ontrakSectionTitle_B">
+						<td class="ontrakHeading_02">
+    <font face="Arial"><strong><span class="auto-style1">Using C and libusb&nbsp; with ADU USB Data
+    Acquisition Products (Linux)</span></strong></font></td>
+					</tr>
+					<tr>
+						<td class="auto-style18">
+    <p>
+	<img alt="" height="92" src="Eds/Products/ADU200s.jpg" width="156" /> 
+	<a href="products.htm"><big><font
+    face="Arial">View the ADU series of USB based Data Acquisition Products</font></big></a></p>
+    <h3><br>
+    Introduction</h3>
+						<hr />
+						<p>Communicating with USB devices in Visual Studio, or 
+						virtually any application software, involves a few 
+						simple steps.&nbsp; Unlike RS232 based devices which are 
+						connected to physical COM ports, USB devices are 
+						assigned a logical<strong> </strong><em><strong>handle</strong></em> 
+						by operating systems when they are first plugged in. 
+						This process is known as <em><strong>enumeration</strong></em>. 
+						Once a USB device has been<em><strong> </strong></em>
+						enumerated, it is ready for use by the host computer 
+						software. For the host application software to 
+						communicate with the USB device, it must first obtain 
+						the handle assigned to the USB device during the 
+						enumeration process. The handle can be obtained using an 
+						<em><strong>open function</strong></em> along with 
+						some specific information about the USB device. 
+						Information that can be used to obtain a handle to a USB 
+						device include, <em><strong>serial number</strong></em>, 
+						<strong><em>product ID</em></strong>, or <strong><em>vendor 
+                        ID</em></strong>.
+                        
+                        <p>USB devices have defined interfaces which relate to their functionality. For example, a USB keyboard with built in LEDs may have an interface for sending key presses and an interface for controlling the lights on the keyboard. Interfaces as defined as a set of endpoints. Endpoints are used as communication channels to and from the device and host and can either be IN or OUT. They are defined relative to the host - OUT endpoints transport data to the device (write) and IN endpoints transport data to the host (read).</p> 
+                        
+                        <p>Once we obtain a USB device handle, the interface we want to use must be claimed. This will allow us to read and write information to and from the USB device via our application. Once the application has finished 
+						with all communication with the USB device, the handle 
+						is closed. The handle is generally closed when the 
+						application terminates.</p>
+						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Linux using C and libusb. Basics of opening a USB device handle, writing and reading data, as well as closing the handle of the ADU usb device is provided as an example.
+                             An alternate way of working with ADU devices in Linux is to use the adutux kernel driver to access the device as a file descriptor (outlined here: <a href="https://www.ontrak.net/Linux/APG.htm">https://www.ontrak.net/Linux/APG.htm</a>). 
+                        </font></p>
+                        <p><font face="Arial">
+    All source code is provided so that you may review details that
+    are not highlighted here.</font></p>
+						<p>
+						Figure 1. AduHidTest&nbsp;C# Example (Visual Studio 2019)</p>
+						<hr />
+						<h3>
+						Lets have a look at the code......</h3>
+						<p>libusb is a C library that provides generic access to USB devices. We will need a vendor and product ID in order to open the USB device. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a> Let's also declare our libusb USB device handle. This handle will be used for all of our interactions with the USB device via libusb (opening, closing, reading and writing commands).</p>
+                        
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+<span style="color: #008800">#include &lt;libusb-1.0/libusb.h&gt;</span><span style="color: #008800; font-style: italic">// Include the libusb header</span>
+
+<span style="color: #008800">#define VENDOR_ID      0x0a07   </span><span style="color: #008800; font-style: italic">// Ontrak</span>
+<span style="color: #008800">#define PRODUCT_ID     0x0046   </span><span style="color: #008800; font-style: italic">// ADU70 (0x0046 == 70 decimal). Set this product ID to match your device</span>
+<span style="color: #008800">#define ENDPOINT_OUT   0x01     </span><span style="color: #008800; font-style: italic">// USB OUT endpoint (WRITE) - send to device</span>
+<span style="color: #008800">#define ENDPOINT_IN    0x81     </span><span style="color: #008800; font-style: italic">// USB IN endpoint (READ) - send to host</span>
+
+<span style="color: #AA22FF; font-weight: bold">struct</span> libusb_device_handle <span style="color: #666666">*</span> devh <span style="color: #666666">=</span> <span style="color: #AA22FF">NULL</span>; <span style="color: #008800; font-style: italic">// USB device handle</span>
+
+</pre></div>
+
+<p>Next, we'll initialize the libusb library and check the returned result. For information purposes, we will also set our debugging output to the maximum level.</p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+<span style="color: #00BB00; font-weight: bold">int</span> <span style="color: #00A000">main</span>( <span style="color: #00BB00; font-weight: bold">int</span> argc, <span style="color: #00BB00; font-weight: bold">char</span> <span style="color: #666666">**</span>argv )
+{
+	<span style="color: #00BB00; font-weight: bold">int</span> result;
+
+	<span style="color: #008800; font-style: italic">// Initialize libusb</span>
+	result <span style="color: #666666">=</span> libusb_init( <span style="color: #AA22FF">NULL</span> );
+	<span style="color: #AA22FF; font-weight: bold">if</span> ( result <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span> )
+	{
+		printf( <span style="color: #BB4444">&quot;Error initializing libusb: %s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span>, libusb_error_name( result ) );
+		exit( <span style="color: #666666">-1</span> );
+	}
+
+	<span style="color: #008800; font-style: italic">// Set debugging output to max level</span>
+	libusb_set_debug( <span style="color: #AA22FF">NULL</span>, <span style="color: #666666">3</span> );
+
+</pre></div>
+
+<!-- auto detach, one buffer for read and write (64 bytes) -->
+
+<p>If initialization of libusb was successful, we will now attempt to open the connected USB device that matches our vendor and product ID. We set auto detach kernel driver to true for the device. If the kernel currently has the device open via a driver (such as adutux), the driver will be detached. Upon closing the device, the driver will automatically reattach. This can also be achieved manually through using libusb_detach_kernel_driver(). At this point we also need to clain the interface that we wish to use. ADU devices have interface 0 defined with an IN and OUT endpoint used for reading and writing, respectively.</p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+	<span style="color: #008800; font-style: italic">// Open our ADU device</span>
+	devh <span style="color: #666666">=</span> libusb_open_device_with_vid_pid( <span style="color: #AA22FF">NULL</span>, VENDOR_ID, PRODUCT_ID );
+	<span style="color: #AA22FF; font-weight: bold">if</span> ( <span style="color: #666666">!</span>devh )
+	{
+		printf( <span style="color: #BB4444">&quot;Error finding USB device</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span> );
+		<span style="color: #AA22FF; font-weight: bold">if</span> ( devh )
+		{
+			libusb_close( devh );
+		}
+
+		libusb_exit( <span style="color: #AA22FF">NULL</span> );
+		exit( <span style="color: #666666">-1</span> );
+	}
+
+	<span style="color: #008800; font-style: italic">// Enable auto-detaching of the kernel driver. This can also be manually done via libusb_detach_kernel_driver().</span>
+	libusb_set_auto_detach_kernel_driver( devh, <span style="color: #666666">1</span> );
+
+	<span style="color: #008800; font-style: italic">// Claim interface 0 on the device</span>
+	result <span style="color: #666666">=</span> libusb_claim_interface( devh, <span style="color: #666666">0</span> );
+	<span style="color: #AA22FF; font-weight: bold">if</span> ( result <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span> )
+	{
+		printf( <span style="color: #BB4444">&quot;Error claiming interface: %s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span>, libusb_error_name( result ) );
+		<span style="color: #AA22FF; font-weight: bold">if</span> ( devh )
+		{
+			libusb_close( devh );
+		}
+
+		libusb_exit( <span style="color: #AA22FF">NULL</span> );
+		exit( <span style="color: #666666">-2</span> );
+    }
+
+</pre></div>
+
+<p>Now that we have successfully opened our device and specified the endpoint we wish to use, we can use interrupt transfers to write commands to the ADU device and read the result.</p>
+<p>We will create two buffers. One to hold our command, the other for the read result.</p> 
+<p>All ADU commands have their first byte set to 0x01 and the following bytes contain the ASCII representation of the command. The ADU command packet format is described here: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm</a>. As described in the link, the remaining bytes in the command buffer must be null padded (0x00). This is done here via a memset.</p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+	<span style="color: #00BB00; font-weight: bold">unsigned</span> <span style="color: #00BB00; font-weight: bold">char</span> data_cmd[ <span style="color: #666666">8</span> ]; <span style="color: #008800; font-style: italic">// Buffer to hold the command we will send to the ADU device</span>
+	<span style="color: #00BB00; font-weight: bold">unsigned</span> <span style="color: #00BB00; font-weight: bold">char</span> data_result[ <span style="color: #666666">64</span> ]; <span style="color: #008800; font-style: italic">// Maximum 64 bytes read for full-speed endpoints</span>
+
+	memset( data_cmd, <span style="color: #666666">0x00</span>, <span style="color: #AA22FF; font-weight: bold">sizeof</span>( data_cmd ) );
+	memset( data_result, <span style="color: #666666">0x00</span>, <span style="color: #AA22FF; font-weight: bold">sizeof</span>( data_result ) );
+
+	<span style="color: #008800; font-style: italic">// &#39;RD&#39; command - get present reading</span>
+	data_cmd[ <span style="color: #666666">0</span> ] <span style="color: #666666">=</span> <span style="color: #666666">0x01</span>;
+	data_cmd[ <span style="color: #666666">1</span> ] <span style="color: #666666">=</span> <span style="color: #BB4444">&#39;R&#39;</span>;
+	data_cmd[ <span style="color: #666666">2</span> ] <span style="color: #666666">=</span> <span style="color: #BB4444">&#39;D&#39;</span>;
+
+</pre></div>
+
+<p>Now that we have our buffers, let's send our command to the device. We want to use the OUT endpoint to send data from the host to the device. Endpoint address 0x81 is standard for IN and 0x01 is standard for OUT. For convenience, we've defined these at the top of our source code as ENDPOINT_OUT and ENDPOINT_IN.</p>
+<p>We'll use libusb_interrupt_transfer to write out command to the device on ENDPOINT_OUT. Interrupt transfers are a transfer type used for sending infrequent and small amounts of data. Compared to streaming video from a webcam, the ADU devices send small amounts of data. After sending, we check to result to make sure the transfer succeeded. The number of bytes sent should match our command buffer's size (8 bytes).</p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+	<span style="color: #00BB00; font-weight: bold">int</span> bytes_sent <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+	<span style="color: #00BB00; font-weight: bold">int</span> bytes_read <span style="color: #666666">=</span> <span style="color: #666666">0</span>;
+
+	<span style="color: #008800; font-style: italic">// Attempt to send the RD command to the OUT endpoint (with a 500 millisecond timeout)</span>
+	result <span style="color: #666666">=</span> libusb_interrupt_transfer( devh, ENDPOINT_OUT, data_cmd, <span style="color: #666666">8</span>, <span style="color: #666666">&amp;</span>bytes_sent, <span style="color: #666666">500</span> );
+	printf( <span style="color: #BB4444">&quot;Send &#39;RD&#39; result: %i, Bytes sent: %i</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span>, result, bytes_sent );
+
+    </pre></div>
+
+    <p>If the interrupt transfer succeeds, we should now have a result to read from the command we sent. We can use libusb_interrupt_transfer with the ENDPOINT_IN endpoint. The parameters are the same as for sending, however after the call the specified buffer will contain the data read from the device and bytes_read will containe the number of bytes that were read and stored in the buffer.</p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+	<span style="color: #AA22FF; font-weight: bold">if</span> ( result <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span> ) <span style="color: #008800; font-style: italic">// was the interrupt transfer successful?</span>
+	{
+		printf( <span style="color: #BB4444">&quot;Error sending interrupt transfer: %s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span>, libusb_error_name( result ) );
+	}
+	<span style="color: #AA22FF; font-weight: bold">else</span>
+	{
+		<span style="color: #008800; font-style: italic">// If so, attempt to read the result from the IN endpoint (with a 500 millisecond timeout)</span>
+		result <span style="color: #666666">=</span> libusb_interrupt_transfer( devh, ENDPOINT_IN, data_result, <span style="color: #666666">64</span>, <span style="color: #666666">&amp;</span>bytes_read, <span style="color: #666666">500</span> );
+		printf( <span style="color: #BB4444">&quot;Read result: %i, Bytes read: %i</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span>, result, bytes_read );
+        </pre></div>
+
+    </pre></div>
+
+        <p>If reading from the device was successful, let's print out the data received and stored in data_result.</p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+		<span style="color: #AA22FF; font-weight: bold">if</span> ( result <span style="color: #666666">&lt;</span> <span style="color: #666666">0</span> )
+		{
+			printf( <span style="color: #BB4444">&quot;Error reading interrupt transfer: %s</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span>, libusb_error_name( result ) );
+		}
+		<span style="color: #AA22FF; font-weight: bold">else</span>
+		{
+			printf( <span style="color: #BB4444">&quot;Bytes: &quot;</span> );
+			<span style="color: #AA22FF; font-weight: bold">for</span> ( <span style="color: #00BB00; font-weight: bold">int</span> i <span style="color: #666666">=</span> <span style="color: #666666">0</span>; i <span style="color: #666666">&lt;</span> bytes_read; <span style="color: #666666">++</span>i )
+			{
+				printf( <span style="color: #BB4444">&quot;%u, &quot;</span>, data_result[ i ] );
+			}
+
+			printf( <span style="color: #BB4444">&quot;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">ASCII: &quot;</span> );
+
+			<span style="color: #AA22FF; font-weight: bold">for</span> ( <span style="color: #00BB00; font-weight: bold">int</span> i <span style="color: #666666">=</span> <span style="color: #666666">1</span>; i <span style="color: #666666">&lt;</span> <span style="color: #666666">9</span>; <span style="color: #666666">++</span>i )
+			{
+				printf( <span style="color: #BB4444">&quot;%c&quot;</span>, data_result[ i ] );
+			}
+
+			printf( <span style="color: #BB4444">&quot;</span><span style="color: #BB6622; font-weight: bold">\n</span><span style="color: #BB4444">&quot;</span> );
+		}
+	}
+
+    </pre></div>
+
+    <p>Since we are finished with the device, we should release the interface and close the device. If any kernel driver was previously attached to the device, it will now be reattached due to calling libusb_set_auto_detach_kernel_driver earlier in our code.</p>
+
+<div style="background: #f8f8f8; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;">
+<pre style="margin: 0; line-height: 125%">
+
+	libusb_release_interface( devh, <span style="color: #666666">0</span> );
+	libusb_close( devh );
+	libusb_exit( <span style="color: #AA22FF">NULL</span> );
+
+	<span style="color: #AA22FF; font-weight: bold">return</span> <span style="color: #666666">0</span>;
+}
+</pre></div>
+
+<p>This example illustrates the basics of reading and writing to ADU devices using libusb, interrupt transfers, and endpoints.</p>
+<p>In a larger application, you may want to use libusb's asynchronous interface as to not block the application. Using this approach, function callbacks can be set to notify you on completion of transfers. More information can be found here: <a href="http://libusb.sourceforge.net/api-1.0/libusb_io.html">http://libusb.sourceforge.net/api-1.0/libusb_io.html</a></p>
+
+						<hr />
+						<p><big><font face="Arial">
+						<a href="VisualStudioCsharp32.zip">DOWNLOAD&nbsp;C Example File in ZIP format. </a> </font></big></p>
+						<hr />
+						<p class="ontrakZTableSetup1">
+						<br />
+						</p>
+    					</td>
+					</tr>
+				</table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+				
+</td>
+			</tr>
+			</table>
+		</td>
+		<td valign="top">&nbsp;&nbsp; </td>
+	</tr>
+	<tr>
+		<td valign="top">&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+
+		&nbsp;</td>
+		<td valign="top">&nbsp;</td>
+	</tr>
+</table>
+
+</div>
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_footer"></div>
+<!------------------------------------------->
+
+</body>
+
+</html>
