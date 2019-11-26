@@ -134,7 +134,7 @@
 						<hr />
 						<h3>
 						Lets have a look at the code......</h3>
-						<p><strong><em>hidapi</em></strong> is a C library that provides simple access to HID compliant USB devices. We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
+                            <p><strong><em>hidapi</em></strong> is a C library that provides simple access to HID compliant USB devices (<a href="https://github.com/libusb/hidapi">https://github.com/libusb/hidapi</a>). We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
 						
 						<pre><code class="language-c">
 // libhidapi library must be available. It can be installed on Debian/Ubuntu using apt-get install libhiapi-dev
@@ -149,11 +149,6 @@
 
 <p>Low-speed and full-speed devices have different transfer sizes for the data sent between host (computer) and device (ADU).</p>
 <p>A low-speed device writes and reads 8 byte packets, whereas a high-speed device's transfer size is 64 bytes. Be sure to uncomment the one matching your connected device. In Linux, 'dmesg' may be used to find the device speed. Uncomment the appropriate speed based on your connected device.</p -->
-
-<pre><code class="language-c">
-
-#define TRANSFER_SIZE    8     // ADU208 is a low-speed device, so we must use 8 byte transfers
-</code></pre>
 
 <p>Next, let's declare our USB device handle. This handle will be used for all of our interactions with the USB device via hidapi (opening, closing, reading and writing commands). We'll also initialize the hidapi library and check the returned result.</p>
 
@@ -182,43 +177,24 @@ int main( int argc, char **argv )
 	}
 </code></pre>
 
-<p>At this point we also need to clain the interface that we wish to use. ADU devices have interface 0 defined with an IN and OUT endpoint used for reading and writing, respectively.</p>
-<pre><code class="language-c">
-    // Claim interface 0 on the device
-    result = libusb_claim_interface( device_handle, 0 );
-    if ( result < 0 )
-    {
-        printf( "Error claiming interface: %s\n", libusb_error_name( result ) );
-        if ( device_handle )
-        {
-            libusb_close( device_handle );
-        }
-
-        libusb_exit( NULL );
-        exit( -3 );
-	}
-	
-</code></pre>
-
 <p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
 	This is to clear any pending reads that was not initiated by us:</p>
 
 <pre><code class="language-c">
-    while ( 0 == read_from_adu( device_handle, &value, 200 ) )
+    while ( 0 != read_from_adu( handle, &value, 200 ) )
     {
     }
 </code></pre>
 
-<p>Now that we have successfully opened our device and specified the interface we wish to use, we can use interrupt transfers to write commands to the ADU device and read the result.</p>
+<p>Now that we have successfully opened our device and specified the interface we wish to use, we can write commands to the ADU device and read the result.</p>
 <p>Two convenience functions have been written to help properly format command packets to send to the ADU device, as well as to read a result from the ADU device: write_to_adu() and read_from_adu().
 	We won't be covering these functions in detail, however comments in the source code provide an explanation of what is occuring. Feel free to modify these if required.</p>
 
 <pre><code class="language-c">
-    // Now that we have our device and have claimed interface 0, we can write to and read from it:
-    result = write_to_adu( device_handle, "RK0", 200 ); // reset relay 0
+	// write_to_adu() return the number of bytes written, or -1 on failure
+	result = write_to_adu( handle, "RK0" ); // reset relay 0
 
-    // We aren't checking the result of write_to_adu, but it will return 0 on success and a negative number on failure.
-    result = write_to_adu( device_handle, "SK0", 200 ); // close relay 0
+    result = write_to_adu( handle, "SK0" ); // close relay 0
 </pre></code>
 
 <p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
@@ -228,28 +204,24 @@ int main( int argc, char **argv )
 	request return values. Failing to do so could cause the OS to disconnect the device and require it to be reset.</p>
 
 <pre><code class="language-c">
-    // Send a command to request value of relay 0 (should be 1 as we closed the relay with SK0)
-	result = write_to_adu( device_handle, "RPK0", 200 );
-	
-	// Read the result
-    int value = 0; // variable to hold the result
-    result = read_from_adu( device_handle, &value, 200 );
+	// Send a command to request the value of relay 0. We'll need to read the result using read_from_adu() 
+	result = write_to_adu( handle, "RPK0" );
 
-    if ( result == 0 ) // result of 0 indicates success
-    {
-        printf( "Read value: %i\n", value );
-    }
+	// Read the result (should be 1 since we closed the relay with 'SK0' command)
+	if ( -1 != read_from_adu( handle, &value, 200 ) )
+	{
+		wprintf( L"Read value: %i\n", value );
+	}
 </pre></code>
 
-<p>Since we are finished with the device, we should release the interface and close the device. If any kernel driver was previously attached to interface 0, it will now be reattached due to calling libusb_set_auto_detach_kernel_driver earlier in our code.</p>
+<p>Since we are finished with the device, we should close the device and shutdown the hidapi library.</p>
 
 <pre><code class="language-c">
-    // we are done with our device and will now release the interface we previously claimed as well as the device
-    libusb_release_interface( device_handle, 0 );
-    libusb_close( device_handle );
+	// Close the device
+	hid_close( handle );
 
-    // shutdown libusb
-    libusb_exit( NULL );
+	// Finalize the hidapi library
+	result = hid_exit();
 
     return 0;
 }
@@ -270,40 +242,45 @@ int main( int argc, char **argv )
 
 
 <pre><code class="language-c">
-// Write a command to an ADU device with a specified timeout
-int write_to_adu( libusb_device_handle * _device_handle, const char * _cmd, int _timeout )
+// Write a command to an ADU device by creating a command buffer based on the provided command string
+// Returns -1 on failure, number of bytes written on success
+int write_to_adu( hid_device * _handle, const char * _cmd )
 {
-    const int command_len = strlen( _cmd ); // Get the length of the command string we are sending
+	const int command_len = strlen( _cmd ); // Get the length of the command string we are sending
 
-    int bytes_sent = 0;
+	// Buffer to hold the command we will send to the ADU device.
+	unsigned char buffer[ COMMAND_SIZE ];
+	int bytes_sent;
 
-    // Buffer to hold the command we will send to the ADU device.
-    // Its size is set to the transfer size for low or full speed USB devices (ADU model specific - see defines at top of file)
-    unsigned char buffer[ TRANSFER_SIZE ]; 
+	if ( command_len > COMMAND_SIZE - 1 )
+	{
+		printf( "Error: command is larger than our limit of %i\n", COMMAND_SIZE - 1 );
+		return -1;
+	}
 
-    if ( command_len > TRANSFER_SIZE )
-    {
-        printf( "Error: command is larger than our limit of %i\n", TRANSFER_SIZE );
-        return -1;
-    }
+    // Message structure:
+    //   message is an ASCII string containing the command
+    //   8 bytes in length
+    //   0th byte must always be 0x01 (decimal 1)
+    //   bytes 1 to 7 are ASCII character values representing the command
+    //   remainder of message is padded to 8 bytes with character code 0
 
-    memset( buffer, 0, TRANSFER_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
+	memset( buffer, 0, COMMAND_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
 
-    buffer[0] = 0x01; // First byte of the command buffer needs to be set to a decimal value of 1
+	buffer[ 0 ] = 0x01; // First byte of the command buffer needs to be set to a decimal value of 1
 
-    // Copy the command ASCII bytes into our buffer, starting at the second byte (we need to leave the first byte as decimal value 1)
-    memcpy( &buffer[1], _cmd, command_len ); 
+	// Copy the command ASCII bytes into our buffer, starting at the second byte (we need to leave the first byte as decimal value 1)
+	memcpy( &buffer[ 1 ], _cmd, command_len );
 
-    // Attempt to send the command to the OUT endpoint (0x01) with the use specified millisecond timeout
-    int result = libusb_interrupt_transfer( _device_handle, 0x01, buffer, TRANSFER_SIZE, &bytes_sent, _timeout );
-    printf( "Write '%s' result: %i, Bytes sent: %u\n", _cmd, result, bytes_sent );
+	// Attempt to write the command to the device
+	bytes_sent = hid_write( _handle, buffer, COMMAND_SIZE );
 
-    if ( result < 0 ) // Was the interrupt transfer successful?
-    {
-        printf( "Error sending interrupt transfer: %s\n", libusb_error_name( result ) );
-    }
+	if ( bytes_sent == -1 ) // Was the write successful?
+	{
+		wprintf( L"Error writing to device: %s\n", hid_error( _handle ) );
+	}
 
-    return result; // Returns 0 on success, a negative number specifying the libusb error otherwise
+	return bytes_sent;
 }
 </pre></code>
 
@@ -318,44 +295,40 @@ ASCII value will need to be converted to an integer. can be done using the C ato
 
 <pre><code class="language-c">
 // Read a command from an ADU device with a specified timeout
-int read_from_adu( libusb_device_handle * _device_handle, int * _read_value, int _timeout )
+int read_from_adu( hid_device * _handle, int * _read_value, int _timeout )
 {
-    int bytes_read = 0;
+	int bytes_read;
 
-    // Buffer to hold the command we will receive from the ADU device
-    // Its size is set to the transfer size for low or full speed USB devices (ADU model specific - see defines at top of file)
-    unsigned char buffer[ TRANSFER_SIZE ];
+	// Buffer to hold the command we will receive from the ADU device
+	// Its size is set to the transfer size for low or full speed USB devices (ADU model specific - see defines at top of file)
+	unsigned char buffer[ COMMAND_SIZE ];
+	memset( buffer, 0, COMMAND_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
 
-    memset( buffer, 0, TRANSFER_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
+	// Attempt to read the result from the device
+	bytes_read = hid_read_timeout( _handle, buffer, COMMAND_SIZE, _timeout );
 
-    // Attempt to read the result from the IN endpoint (0x81) with user specified timeout
-    int result = libusb_interrupt_transfer( _device_handle, 0x81, buffer, TRANSFER_SIZE, &bytes_read, _timeout );
-    printf( "Read result: %i, Bytes read: %u\n", result, bytes_read );
+	if ( bytes_read == -1 ) // Was the interrupt transfer successful?
+	{
+		wprintf( L"Error reading interrupt transfer: %s\n", hid_error( _handle ) );
+	}
 
-    if ( result < 0 ) // Was the interrupt transfer successful?
-    {
-        printf( "Error reading interrupt transfer: %s\n", libusb_error_name( result ) );
-        return result;
-    }
+	// Our buffer should now hold the data read from the ADU device. The first byte will contain what is known as
 
-    // Our buffer should now hold the data read from the ADU device. The first byte will be a value of decimal 1.
-    // The data we are interested in follows in ASCII form. We will need to convert the ASCII data to an integer
-    // in order for it to be usable to us in a numeric format. The buffer is null terminated, and as such atoi()
-    // can be used for this.
 
-    // Convert the ASCII string result stored in the buffer's 2nd index and onward from a string to an integer
-    // and store it in the read_value pointer user argument
-    *_read_value = atoi( (const char *)&buffer[1] );
+	// The data we are interested in follows in ASCII form. We will need to convert the ASCII data to an integer
+	// in order for it to be usable to us in a numeric format. The buffer is null terminated, and as such atoi()
+	// can be used for this.
 
-    return result; // returns 0 on success, a negative number specifying the libusb error otherwise
+	// Convert the ASCII string result stored in the buffer's 2nd index and onward from a string to an integer
+	// and store it in the read_value pointer user argument
+	* _read_value = atoi( (const char *)& buffer[ 1 ] );
+
+	return bytes_read; // returns 0 on success, a negative number specifying the libusb error otherwise
 }
 </code></pre>
 
 
-<p>This example illustrates the basics of reading and writing to ADU devices using libusb, interrupt transfers, and endpoints.</p>
-<p>In a larger application, you may want to use libusb's asynchronous interface as to not block the application. 
-Using this approach, function callbacks can be set to notify you on completion of transfers. 
-More information can be found here: <a href="http://libusb.sourceforge.net/api-1.0/libusb_io.html">http://libusb.sourceforge.net/api-1.0/libusb_io.html</a></p>
+<p>This example illustrates the basics of reading and writing to ADU devices using the hidapi library.</p>
 
 <p><strong>NOTE:</strong> When running the example, it must be run with root privileges in order to access the USB device.</p>
 
