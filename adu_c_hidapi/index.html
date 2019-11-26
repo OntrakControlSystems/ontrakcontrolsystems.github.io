@@ -147,9 +147,6 @@
 #define COMMAND_SIZE   8       // ADU commands are 8 bytes in length
 </code></pre>
 
-<p>Low-speed and full-speed devices have different transfer sizes for the data sent between host (computer) and device (ADU).</p>
-<p>A low-speed device writes and reads 8 byte packets, whereas a high-speed device's transfer size is 64 bytes. Be sure to uncomment the one matching your connected device. In Linux, 'dmesg' may be used to find the device speed. Uncomment the appropriate speed based on your connected device.</p -->
-
 <p>Next, let's declare our USB device handle. This handle will be used for all of our interactions with the USB device via hidapi (opening, closing, reading and writing commands). We'll also initialize the hidapi library and check the returned result.</p>
 
 <pre><code class="language-c">
