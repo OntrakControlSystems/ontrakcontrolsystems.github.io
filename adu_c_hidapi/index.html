@@ -88,8 +88,8 @@
 				<table cellspacing="1" style="width: 100%">
 					<tr class="ontrakSectionTitle_B">
 						<td class="ontrakHeading_02">
-    <font face="Arial"><strong><span class="auto-style1">Using C and libusb&nbsp; with ADU USB Data
-    Acquisition Products (Linux)</span></strong></font></td>
+    <font face="Arial"><strong><span class="auto-style1">Using C and the hidapi library&nbsp; with ADU USB Data
+    Acquisition Products (Linux & OS X)</span></strong></font></td>
 					</tr>
 					<tr>
 						<td class="auto-style18">
@@ -119,14 +119,14 @@
 						<strong><em>product ID</em></strong>, or <strong><em>vendor 
                         ID</em></strong>.
                         
-                        <p>USB devices have defined <em><strong>interfaces</strong></em> which relate to their functionality. For example, a USB keyboard with built in LEDs may have an interface for sending key presses and an interface for controlling the lights on the keyboard. Interfaces as defined as a set of <em><strong>endpoints</strong></em>. Endpoints are used as communication channels to and from the device and host and can either be IN or OUT. They are defined relative to the host - OUT endpoints transport data to the device (write) and IN endpoints transport data to the host (read).</p> 
-                        
-                        <p>Once we obtain a USB device handle, we must <em><strong>claim the interface</strong></em> we want to use. This will allow us to read and write information to and from the USB device via our application. Once the application has finished 
+                        <p>Once we obtain a USB device handle, we can read and write information to and from the USB device via our application.
+                         Once the application has finished
 						with all communication with the USB device, the handle 
 						is closed. The handle is generally closed when the 
 						application terminates.</p>
-						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Linux using C and libusb. Basics of opening a USB device handle, writing and reading data, as well as closing the handle of the ADU usb device is provided as an example.
-                 		An alternate way of working with ADU devices in Linux is to use the adutux kernel driver to access the device as a file descriptor (outlined here: <a href="https://www.ontrak.net/Linux/APG.htm">https://www.ontrak.net/Linux/APG.htm</a>). 
+						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Linux and OS X using C and libhidapi. Basics of opening a USB device handle, writing and reading data, as well as closing the handle of the ADU usb device is provided as an example.
+                         An alternate way of working with ADU devices in Linux is to use the adutux kernel driver to access the device as a file descriptor (outlined here: <a href="https://www.ontrak.net/Linux/APG.htm">https://www.ontrak.net/Linux/APG.htm</a>).
+                         The preffered method of interfacing with ADU devices on Windows is via the DLL. 
                         </font></p>
                         <p><font face="Arial">
     All source code is provided so that you may review details that
@@ -134,15 +134,17 @@
 						<hr />
 						<h3>
 						Lets have a look at the code......</h3>
-						<p><strong><em>libusb</em></strong> is a C library that provides generic access to USB devices. We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
+						<p><strong><em>hidapi</em></strong> is a C library that provides simple access to HID compliant USB devices. We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
 						
 						<pre><code class="language-c">
-// libusb library must be available. It can be installed on Debian/Ubuntu using apt-get install libusb-1.0-0-dev
-#include &ltlibusb-1.0/libusb.h&gt
+// libhidapi library must be available. It can be installed on Debian/Ubuntu using apt-get install libhiapi-dev
+#include "hidapi/hidapi.h"
 
 #define VENDOR_ID      0x0a07  // Ontrak vendor ID. This should never change
 #define PRODUCT_ID     208     // ADU208 product ID. Set this product ID to match your device.
                                // Product IDs can be found at https://www.ontrak.net/Nodll.htm.
+
+#define COMMAND_SIZE   8       // ADU commands are 8 bytes in length
 </code></pre>
 
 <p>Low-speed and full-speed devices have different transfer sizes for the data sent between host (computer) and device (ADU).</p>
@@ -150,54 +152,37 @@
 
 <pre><code class="language-c">
 
-//#define TRANSFER_SIZE    64  // Data transfer size is either 8 bytes (low-speed USB devices) or 64 bytes (full-speed USB devices).
-                               // Set this to 8 or 64 depending on the ADU device you are using (see https://www.ontrak.net/Nodll.htm).
-                               // You can also type `dmesg` in your terminal immediately after connecting an ADU to your computer.
-                               // This should list whether it is low-speed or full-speed.
-
 #define TRANSFER_SIZE    8     // ADU208 is a low-speed device, so we must use 8 byte transfers
 </code></pre>
 
-<p>Next, let's declare our libusb USB device handle. This handle will be used for all of our interactions with the USB device via libusb (opening, closing, reading and writing commands). We'll also initialize the libusb library and check the returned result. For information purposes, we will also set our debugging output to the maximum level.</p>
+<p>Next, let's declare our USB device handle. This handle will be used for all of our interactions with the USB device via hidapi (opening, closing, reading and writing commands). We'll also initialize the hidapi library and check the returned result.</p>
 
 <pre><code class="language-c">
 int main( int argc, char **argv )
 {
-    struct libusb_device_handle * device_handle = NULL; // Our ADU's USB device handle
+	hid_device * handle;
+	int result;
 
-    // Initialize libusb
-    int result = libusb_init( NULL );
-    if ( result < 0 )
-    {
-        printf( "Error initializing libusb: %s\n", libusb_error_name( result ) );
-        exit( -1 );
-    }
-
-    // Set debugging output to max level
-	libusb_set_option( NULL, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING );
-
+	// Initialize the hidapi library
+	result = hid_init();
 </code></pre>
 
-<p>If initialization of libusb was successful, we will now attempt to open the connected USB device that matches our vendor and product ID.</p>
+<p>If initialization of hidapi was successful, we will now attempt to open the connected USB device that matches our vendor and product ID.</p>
 
 <pre><code class="language-c">
-    // Open our ADU device that matches our vendor id and product id
-    device_handle = libusb_open_device_with_vid_pid( NULL, VENDOR_ID, PRODUCT_ID );
-    if ( !device_handle )
-    {
-        printf( "Error finding USB device\n" );
-        libusb_exit( NULL );
-        exit( -2 );
+	// Open the device using the VID, PID,
+	// and optionally the Serial number.
+	handle = hid_open( VENDOR_ID, PRODUCT_ID, NULL );
+
+	if ( handle == NULL )
+	{
+		wprintf( L"Unable to open ADU device with product ID %i. Please check that it is connected. If it is connected, ensure you are running the example with root privileges such as with sudo.\n", PRODUCT_ID );
+		result = hid_exit();
+		exit( -1 );
 	}
-
 </code></pre>
 
-<p>We should also enable auto-detaching of the kernel driver. If a kernel driver currently has an interface claimed, it will be automatically be detached when we claim that interface. When the interface is restored, the kernel driver is allowed to be re-attached. This can alternatively be manually done via libusb_detach_kernel_driver().</p>
-<pre><code class="language-c">
-	libusb_set_auto_detach_kernel_driver( device_handle, 1 );
-</pre></code>
-
-<p>At this point we also need to claim the interface that we wish to use. ADU devices have interface 0 defined with an IN and OUT endpoint used for reading and writing, respectively.</p>
+<p>At this point we also need to clain the interface that we wish to use. ADU devices have interface 0 defined with an IN and OUT endpoint used for reading and writing, respectively.</p>
 <pre><code class="language-c">
     // Claim interface 0 on the device
     result = libusb_claim_interface( device_handle, 0 );
