@@ -1,0 +1,415 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="en-ca" http-equiv="Content-Language" />
+<meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
+<!--ONTRAKS META TAGS FOR SEARCH ENGINE -->
+<meta Name="keywords" content="acquisition, C, libusb, usb, visual studio 2019, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, visual, basic automation, interface, serial, usb" />
+<meta Name="description" content=" Guide to using C and libusb with USB based Data Acquisition products on Linux and Windows."/>
+<!-- ********************************** -->
+
+<link rel="stylesheet" type="text/css" href="ontrak.css" />
+<title>Using C and libusb with ADU USB Data Acquisition Products (Linux & Windows)</title>
+
+<link rel="stylesheet" type="text/css" href="css/ontrak.css">
+<link rel="stylesheet" type="text/css" href="css/ontrakCompat.css">
+<script>var isProgrammingPage = true;</script>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script src="js/externalLoad.js"></script>
+<link href="css/prism.css" rel="stylesheet" />
+
+
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-30278418-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+
+
+
+<style type="text/css">
+.auto-style16 {
+	font-size: small;
+}
+.auto-style17 {
+	font-size: 18px;
+	color: #5E5E5E;
+}
+.auto-style18 {
+	font-family: Arial;
+	font-size: small;
+	font-weight: normal;
+	color: #000000;
+	height: auto;
+	text-align: left;
+}
+</style>
+
+
+
+</head>
+
+<body style="margin: 0; background-color: #FFFFFF">
+<script src="js/prism.js"></script>
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_header"></div>
+<!------------------------------------------->
+				
+<div class="contentMain pSpaceFix">
+
+<table align="left" cellpadding="0" cellspacing="0" class="ontrakZTableSetup" style="width: 1024px">
+	<tr>
+		<td valign="top">&nbsp;&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+		<table cellpadding="0" cellspacing="0" style="width: 1000px">
+			<tr>
+				<td>
+				
+
+				</td>
+			</tr>
+			<tr>
+				<td>&nbsp;&nbsp; &nbsp;</td>
+			</tr>
+			<tr>
+				<td>
+				<table cellspacing="1" style="width: 100%">
+					<tr class="ontrakSectionTitle_B">
+						<td class="ontrakHeading_02">
+    <font face="Arial"><strong><span class="auto-style1">Using C and libusb&nbsp; with ADU USB Data
+    Acquisition Products (Linux)</span></strong></font></td>
+					</tr>
+					<tr>
+						<td class="auto-style18">
+    <p>
+	<img alt="" height="92" src="Eds/Products/ADU200s.jpg" width="156" /> 
+	<a href="products.htm"><big><font
+    face="Arial">View the ADU series of USB based Data Acquisition Products</font></big></a></p>
+    <h3><br>
+    Introduction</h3>
+						<hr />
+						<p>Communicating with USB devices via software involves a few 
+						simple steps. Unlike RS232 based devices which are 
+						connected to physical COM ports, USB devices are 
+						assigned a logical<strong> </strong><em><strong>handle</strong></em> 
+						by operating systems when they are first plugged in. 
+						This process is known as <em><strong>enumeration</strong></em>. 
+						Once a USB device has been<em><strong> </strong></em>
+						enumerated, it is ready for use by the host computer 
+						software. For the host application software to 
+						communicate with the USB device, it must first obtain 
+						the handle assigned to the USB device during the 
+						enumeration process. The handle can be obtained using an 
+						<em><strong>open function</strong></em> along with 
+						some specific information about the USB device. 
+						Information that can be used to obtain a handle to a USB 
+						device include, <em><strong>serial number</strong></em>, 
+						<strong><em>product ID</em></strong>, or <strong><em>vendor 
+                        ID</em></strong>.
+                        
+                        <p>USB devices have defined <em><strong>interfaces</strong></em> which relate to their functionality. For example, a USB keyboard with built in LEDs may have an interface for sending key presses and an interface for controlling the lights on the keyboard. Interfaces as defined as a set of <em><strong>endpoints</strong></em>. Endpoints are used as communication channels to and from the device and host and can either be IN or OUT. They are defined relative to the host - OUT endpoints transport data to the device (write) and IN endpoints transport data to the host (read).</p> 
+                        
+                        <p>Once we obtain a USB device handle, we must <em><strong>claim the interface</strong></em> we want to use. This will allow us to read and write information to and from the USB device via our application. Once the application has finished 
+						with all communication with the USB device, the handle 
+						is closed. The handle is generally closed when the 
+						application terminates.</p>
+						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Linux or Windows using C and libusb. Basics of opening a USB device handle, writing and reading data, as well as closing the handle of the ADU usb device is provided as an example.
+                             Note: the preferred way of working with ADUs in Windows is via the AduHid DLL (see the programming section on OnTrak's web site for an example). An alternate way of working with ADU devices in Linux is to use the adutux kernel driver to access the device as a file descriptor (outlined here: <a href="https://www.ontrak.net/Linux/APG.htm">https://www.ontrak.net/Linux/APG.htm</a>). 
+                        </font></p>
+                        <p><font face="Arial">
+    All source code is provided so that you may review details that
+    are not highlighted here.</font></p>
+						<hr />
+						<h3>
+						Lets have a look at the code......</h3>
+						<p><strong><em>libusb</em></strong> is a C library that provides generic access to USB devices. We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
+						
+						<pre><code class="language-c">
+// libusb library must be available. It can be installed on Debian/Ubuntu using apt-get install libusb-1.0-0-dev
+#include &ltlibusb-1.0/libusb.h&gt
+
+#define VENDOR_ID      0x0a07  // Ontrak vendor ID. This should never change
+#define PRODUCT_ID     208     // ADU208 product ID. Set this product ID to match your device.
+                               // Product IDs can be found at https://www.ontrak.net/Nodll.htm.
+</code></pre>
+
+<p>Low-speed and full-speed devices have different transfer sizes for the data sent between host (computer) and device (ADU).</p>
+<p>A low-speed device writes and reads 8 byte packets, whereas a high-speed device's transfer size is 64 bytes. Be sure to uncomment the one matching your connected device. In Linux, 'dmesg' may be used to find the device speed. Uncomment the appropriate speed based on your connected device.</p -->
+
+<pre><code class="language-c">
+
+//#define TRANSFER_SIZE    64  // Data transfer size is either 8 bytes (low-speed USB devices) or 64 bytes (full-speed USB devices).
+                               // Set this to 8 or 64 depending on the ADU device you are using (see https://www.ontrak.net/Nodll.htm).
+                               // You can also type `dmesg` in your terminal immediately after connecting an ADU to your computer.
+                               // This should list whether it is low-speed or full-speed.
+
+#define TRANSFER_SIZE    8     // ADU208 is a low-speed device, so we must use 8 byte transfers
+</code></pre>
+
+<p>Next, let's declare our libusb USB device handle. This handle will be used for all of our interactions with the USB device via libusb (opening, closing, reading and writing commands). We'll also initialize the libusb library and check the returned result. For information purposes, we will also set our debugging output to the maximum level.</p>
+
+<pre><code class="language-c">
+int main( int argc, char **argv )
+{
+    struct libusb_device_handle * device_handle = NULL; // Our ADU's USB device handle
+
+    // Initialize libusb
+    int result = libusb_init( NULL );
+    if ( result < 0 )
+    {
+        printf( "Error initializing libusb: %s\n", libusb_error_name( result ) );
+        exit( -1 );
+    }
+
+    // Set debugging output to max level
+	libusb_set_option( NULL, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING );
+
+</code></pre>
+
+<p>If initialization of libusb was successful, we will now attempt to open the connected USB device that matches our vendor and product ID.</p>
+
+<pre><code class="language-c">
+    // Open our ADU device that matches our vendor id and product id
+    device_handle = libusb_open_device_with_vid_pid( NULL, VENDOR_ID, PRODUCT_ID );
+    if ( !device_handle )
+    {
+        printf( "Error finding USB device\n" );
+        libusb_exit( NULL );
+        exit( -2 );
+	}
+
+</code></pre>
+
+<p>We should also enable auto-detaching of the kernel driver. If a kernel driver currently has an interface claimed, it will be automatically be detached when we claim that interface. When the interface is restored, the kernel driver is allowed to be re-attached. This can alternatively be manually done via libusb_detach_kernel_driver().</p>
+<pre><code class="language-c">
+	libusb_set_auto_detach_kernel_driver( device_handle, 1 );
+</pre></code>
+
+<p>At this point we also need to clain the interface that we wish to use. ADU devices have interface 0 defined with an IN and OUT endpoint used for reading and writing, respectively.</p>
+<pre><code class="language-c">
+    // Claim interface 0 on the device
+    result = libusb_claim_interface( device_handle, 0 );
+    if ( result < 0 )
+    {
+        printf( "Error claiming interface: %s\n", libusb_error_name( result ) );
+        if ( device_handle )
+        {
+            libusb_close( device_handle );
+        }
+
+        libusb_exit( NULL );
+        exit( -3 );
+	}
+	
+</code></pre>
+
+<p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
+	This is to clear any pending reads that was not initiated by us:</p>
+
+<pre><code class="language-c">
+    while ( 0 == read_from_adu( device_handle, &value, 200 ) )
+    {
+    }
+</code></pre>
+
+<p>Now that we have successfully opened our device and specified the interface we wish to use, we can use interrupt transfers to write commands to the ADU device and read the result.</p>
+<p>Two convenience functions have been written to help properly format command packets to send to the ADU device, as well as to read a result from the ADU device: write_to_adu() and read_from_adu().
+	We won't be covering these functions in detail, however comments in the source code provide an explanation of what is occuring. Feel free to modify these if required.</p>
+
+<pre><code class="language-c">
+    // Now that we have our device and have claimed interface 0, we can write to and read from it:
+    result = write_to_adu( device_handle, "RK0", 200 ); // reset relay 0
+
+    // We aren't checking the result of write_to_adu, but it will return 0 on success and a negative number on failure.
+    result = write_to_adu( device_handle, "SK0", 200 ); // close relay 0
+</pre></code>
+
+<p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
+
+<p>It's important to note that if a command that requests a return value (such as RPK0) is sent to an ADU device, 
+	the return value must be read from the device by calling read_from_adu before issuing any other commands that 
+	request return values. Failing to do so could cause the OS to disconnect the device and require it to be reset.</p>
+
+<pre><code class="language-c">
+    // Send a command to request value of relay 0 (should be 1 as we closed the relay with SK0)
+	result = write_to_adu( device_handle, "RPK0", 200 );
+	
+	// Read the result
+    int value = 0; // variable to hold the result
+    result = read_from_adu( device_handle, &value, 200 );
+
+    if ( result == 0 ) // result of 0 indicates success
+    {
+        printf( "Read value: %i\n", value );
+    }
+</pre></code>
+
+<p>Since we are finished with the device, we should release the interface and close the device. If any kernel driver was previously attached to interface 0, it will now be reattached due to calling libusb_set_auto_detach_kernel_driver earlier in our code.</p>
+
+<pre><code class="language-c">
+    // we are done with our device and will now release the interface we previously claimed as well as the device
+    libusb_release_interface( device_handle, 0 );
+    libusb_close( device_handle );
+
+    // shutdown libusb
+    libusb_exit( NULL );
+
+    return 0;
+}
+</code></pre>
+
+<p>If you're interested in the internals of write_to_adu() and read_from_adu() as well as how to structure a command packet, the details are below.</p>
+
+<p>All ADU commands have their first byte set to 0x01 and the following bytes contain the ASCII representation of the command. 
+	The ADU command packet format is described here: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm</a>. 
+	As described in the link, the remaining bytes in the command buffer must be null padded (0x00). We do this via a memset.</p>
+
+<p>We use the OUT endpoint to send data from the host to the device. Endpoint address 0x81 is standard for IN and 0x01 is standard for OUT.</p>
+
+<p>We'll use libusb_interrupt_transfer to write out command to the device on ENDPOINT_OUT (0x01). Interrupt transfers are a transfer type 
+	used for sending infrequent and small amounts of data. Compared to streaming video from a webcam, the ADU devices send small 
+	amounts of data. After sending, we check to result to make sure the transfer succeeded. The number of bytes sent should match 
+	our command buffer's size (8 bytes since we are using a low-speed device, and 64 bytes if a high speed device).</p>
+
+
+<pre><code class="language-c">
+// Write a command to an ADU device with a specified timeout
+int write_to_adu( libusb_device_handle * _device_handle, const char * _cmd, int _timeout )
+{
+    const int command_len = strlen( _cmd ); // Get the length of the command string we are sending
+
+    int bytes_sent = 0;
+
+    // Buffer to hold the command we will send to the ADU device.
+    // Its size is set to the transfer size for low or full speed USB devices (ADU model specific - see defines at top of file)
+    unsigned char buffer[ TRANSFER_SIZE ]; 
+
+    if ( command_len > TRANSFER_SIZE )
+    {
+        printf( "Error: command is larger than our limit of %i\n", TRANSFER_SIZE );
+        return -1;
+    }
+
+    memset( buffer, 0, TRANSFER_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
+
+    buffer[0] = 0x01; // First byte of the command buffer needs to be set to a decimal value of 1
+
+    // Copy the command ASCII bytes into our buffer, starting at the second byte (we need to leave the first byte as decimal value 1)
+    memcpy( &buffer[1], _cmd, command_len ); 
+
+    // Attempt to send the command to the OUT endpoint (0x01) with the use specified millisecond timeout
+    int result = libusb_interrupt_transfer( _device_handle, 0x01, buffer, TRANSFER_SIZE, &bytes_sent, _timeout );
+    printf( "Write '%s' result: %i, Bytes sent: %u\n", _cmd, result, bytes_sent );
+
+    if ( result < 0 ) // Was the interrupt transfer successful?
+    {
+        printf( "Error sending interrupt transfer: %s\n", libusb_error_name( result ) );
+    }
+
+    return result; // Returns 0 on success, a negative number specifying the libusb error otherwise
+}
+</pre></code>
+
+
+<p>If the interrupt transfer succeeds, we should now have a result to read from the command we sent. We can use libusb_interrupt_transfer 
+with the ENDPOINT_IN endpoint to read the value. The parameters are the same as for sending, however after the call the specified buffer will contain the 
+data read from the device and bytes_read will contain the number of bytes that were read and stored in the buffer.</p>
+
+<p>If reading from the device was successful, let's print out the data received and stored in data_result. It's important to note 
+that the values returned from the ADU is an ASCII representation of the number. If you will be evaluating it as a number, the 
+ASCII value will need to be converted to an integer. can be done using the C atoi() function (ASCII to Integer).</p>
+
+<pre><code class="language-c">
+// Read a command from an ADU device with a specified timeout
+int read_from_adu( libusb_device_handle * _device_handle, int * _read_value, int _timeout )
+{
+    int bytes_read = 0;
+
+    // Buffer to hold the command we will receive from the ADU device
+    // Its size is set to the transfer size for low or full speed USB devices (ADU model specific - see defines at top of file)
+    unsigned char buffer[ TRANSFER_SIZE ];
+
+    memset( buffer, 0, TRANSFER_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
+
+    // Attempt to read the result from the IN endpoint (0x81) with user specified timeout
+    int result = libusb_interrupt_transfer( _device_handle, 0x81, buffer, TRANSFER_SIZE, &bytes_read, _timeout );
+    printf( "Read result: %i, Bytes read: %u\n", result, bytes_read );
+
+    if ( result < 0 ) // Was the interrupt transfer successful?
+    {
+        printf( "Error reading interrupt transfer: %s\n", libusb_error_name( result ) );
+        return result;
+    }
+
+    // Our buffer should now hold the data read from the ADU device. The first byte will be a value of decimal 1.
+    // The data we are interested in follows in ASCII form. We will need to convert the ASCII data to an integer
+    // in order for it to be usable to us in a numeric format. The buffer is null terminated, and as such atoi()
+    // can be used for this.
+
+    // Convert the ASCII string result stored in the buffer's 2nd index and onward from a string to an integer
+    // and store it in the read_value pointer user argument
+    *_read_value = atoi( (const char *)&buffer[1] );
+
+    return result; // returns 0 on success, a negative number specifying the libusb error otherwise
+}
+</code></pre>
+
+
+<p>This example illustrates the basics of reading and writing to ADU devices using libusb, interrupt transfers, and endpoints.</p>
+<p>In a larger application, you may want to use libusb's asynchronous interface as to not block the application. 
+Using this approach, function callbacks can be set to notify you on completion of transfers. 
+More information can be found here: <a href="http://libusb.sourceforge.net/api-1.0/libusb_io.html">http://libusb.sourceforge.net/api-1.0/libusb_io.html</a></p>
+
+
+
+						<hr />
+						<p><big><font face="Arial"><a href="VS2019_libusb_example.zip">DOWNLOAD&nbsp;Windows VS2019 Example</a></font></big></p>
+						<p><big><font face="Arial"><a href="linux_libusb_example.zip">DOWNLOAD&nbsp;Linux C Example</a></font></big></p>
+						<hr />
+						<p class="ontrakZTableSetup1">
+						<br />
+						</p>
+    					</td>
+					</tr>
+				</table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+				
+</td>
+			</tr>
+			</table>
+		</td>
+		<td valign="top">&nbsp;&nbsp; </td>
+	</tr>
+	<tr>
+		<td valign="top">&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+
+		&nbsp;</td>
+		<td valign="top">&nbsp;</td>
+	</tr>
+</table>
+
+</div>
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_footer"></div>
+<!------------------------------------------->
+
+</body>
+
+</html>
