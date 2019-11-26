@@ -5,8 +5,8 @@
 <meta content="en-ca" http-equiv="Content-Language" />
 <meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
 <!--ONTRAKS META TAGS FOR SEARCH ENGINE -->
-<meta Name="keywords" content="acquisition, C, libusb, usb, visual studio 2019, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, visual, basic automation, interface, serial, usb" />
-<meta Name="description" content=" Guide to using C and libusb with USB based Data Acquisition products on Linux and Windows."/>
+<meta Name="keywords" content="acquisition, C, libusb, usb, linux, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, visual, basic automation, interface, serial, usb" />
+<meta Name="description" content=" Guide to using C and libusb with USB based Data Acquisition products on Linux"/>
 <!-- ********************************** -->
 
 <link rel="stylesheet" type="text/css" href="ontrak.css" />
@@ -125,8 +125,8 @@
 						with all communication with the USB device, the handle 
 						is closed. The handle is generally closed when the 
 						application terminates.</p>
-						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Linux or Windows using C and libusb. Basics of opening a USB device handle, writing and reading data, as well as closing the handle of the ADU usb device is provided as an example.
-                             Note: the preferred way of working with ADUs in Windows is via the AduHid DLL (see the programming section on OnTrak's web site for an example). An alternate way of working with ADU devices in Linux is to use the adutux kernel driver to access the device as a file descriptor (outlined here: <a href="https://www.ontrak.net/Linux/APG.htm">https://www.ontrak.net/Linux/APG.htm</a>). 
+						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Linux using C and libusb. Basics of opening a USB device handle, writing and reading data, as well as closing the handle of the ADU usb device is provided as an example.
+                 		An alternate way of working with ADU devices in Linux is to use the adutux kernel driver to access the device as a file descriptor (outlined here: <a href="https://www.ontrak.net/Linux/APG.htm">https://www.ontrak.net/Linux/APG.htm</a>). 
                         </font></p>
                         <p><font face="Arial">
     All source code is provided so that you may review details that
@@ -372,10 +372,10 @@ int read_from_adu( libusb_device_handle * _device_handle, int * _read_value, int
 Using this approach, function callbacks can be set to notify you on completion of transfers. 
 More information can be found here: <a href="http://libusb.sourceforge.net/api-1.0/libusb_io.html">http://libusb.sourceforge.net/api-1.0/libusb_io.html</a></p>
 
+<p>NOTE: When running the example, it must be run with root privileges in order to access the USB device.</p>
 
 
 						<hr />
-						<p><big><font face="Arial"><a href="VS2019_libusb_example.zip">DOWNLOAD&nbsp;Windows VS2019 Example</a></font></big></p>
 						<p><big><font face="Arial"><a href="linux_libusb_example.zip">DOWNLOAD&nbsp;Linux C Example</a></font></big></p>
 						<hr />
 						<p class="ontrakZTableSetup1">
