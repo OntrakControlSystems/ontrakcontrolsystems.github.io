@@ -159,30 +159,29 @@ def main():
 <p>Next, we'll open the connected USB device that matches our vendor and product ID. This device will be used for all of our interactions with the ADU via hidapi (opening, closing, reading and writing commands).</p>
 
 <pre><code class="language-c">
-    try:
-        device = hid.device()
-        device.open(VENDOR_ID, PRODUCT_ID)
-        print('Connected to ADU{}\n'.format(PRODUCT_ID))
+	device = hid.device()
+	device.open(VENDOR_ID, PRODUCT_ID)
+	print('Connected to ADU{}\n'.format(PRODUCT_ID))
 </code></pre>
 
 <p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
 	This is to clear any pending reads that was not initiated by us. We'll review the read_adu function later on.</p>
 
 <pre><code class="language-c">
-        # clear the read buffer of any unread values
-        # this is important so that we don't read old values from previous requests sent to the device
-        while True:
-            if read_adu(device, 200) == None:
-                break
+# clear the read buffer of any unread values
+# this is important so that we don't read old values from previous requests sent to the device
+while True:
+	if read_adu(device, 200) == None:
+		break
 </code></pre>
 
 <p>Now that we have successfully opened our device, we can write commands to the ADU device and read the result.</p>
 <p>Two convenience functions have been written to help properly format command packets to send to the ADU device, as well as to read a result from the ADU device: write_to_adu() and read_from_adu(). We'll cover the internals of these functions at the end of this page.</p>
 
 <pre><code class="language-c">
-        # write_to_adu() returns the number of bytes written on success, and None on failure
-        bytes_written = write_to_adu(device, 'RK0') # set relay 0, note: device does not send a response for this
-        bytes_written = write_to_adu(device, 'SK0') # reset relay 0
+	# write_to_adu() returns the number of bytes written on success, and None on failure
+	bytes_written = write_to_adu(device, 'RK0') # set relay 0, note: device does not send a response for this
+	bytes_written = write_to_adu(device, 'SK0') # reset relay 0
 </pre></code>
 
 <p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
