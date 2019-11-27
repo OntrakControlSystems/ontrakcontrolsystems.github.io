@@ -327,9 +327,10 @@ int write_to_adu( libusb_device_handle * _device_handle, const char * _cmd, int 
 with the ENDPOINT_IN endpoint to read the value. The parameters are the same as for sending, however after the call the specified buffer will contain the 
 data read from the device and bytes_read will contain the number of bytes that were read and stored in the buffer.</p>
 
-<p>If reading from the device was successful, let's print out the data received and stored in data_result. It's important to note 
-that the values returned from the ADU is an ASCII representation of the number. If you will be evaluating it as a number, the 
-ASCII value will need to be converted to an integer. can be done using the C atoi() function (ASCII to Integer).</p>
+<p>If reading from the device was successful, let's extract the data we are interested in. It's important to note 
+that the data returned is 8 bytes in length. The first byte of the data returned is 0x01 and is followed by an ASCII representation
+of the number. The remainder of the bytes are padded with 0x00 (NULL) values. The ASCII value will need to be converted to an integer.
+This can be done using the  C atoi() function (ASCII to Integer).</p>
 
 <pre><code class="language-c">
 // Read a command from an ADU device with a specified timeout

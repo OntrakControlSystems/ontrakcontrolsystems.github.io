@@ -88,7 +88,7 @@
 				<table cellspacing="1" style="width: 100%">
 					<tr class="ontrakSectionTitle_B">
 						<td class="ontrakHeading_02">
-    <font face="Arial"><strong><span class="auto-style1">Using C and the hidapi library&nbsp; with ADU USB Data
+    <font face="Arial"><strong><span class="auto-style1">Using Python and the hidapi library with ADU USB Data
     Acquisition Products (Linux & OS X)</span></strong></font></td>
 					</tr>
 					<tr>
@@ -134,89 +134,72 @@
 						<hr />
 						<h3>
 						Lets have a look at the code......</h3>
-                            <p><strong><em>hidapi</em></strong> is a C library that provides simple access to HID compliant USB devices (<a href="https://github.com/libusb/hidapi">https://github.com/libusb/hidapi</a>). We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
+                            <p><strong><em>hidapi</em></strong> is a library that provides simple access to HID compliant USB devices (<a href="https://github.com/libusb/hidapi">https://github.com/libusb/hidapi</a>). We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
 						
-						<pre><code class="language-c">
-// libhidapi library must be available. It can be installed on Debian/Ubuntu using apt-get install libhiapi-dev
-#include "hidapi/hidapi.h"
-
-#define VENDOR_ID      0x0a07  // Ontrak vendor ID. This should never change
-#define PRODUCT_ID     208     // ADU208 product ID. Set this product ID to match your device.
-                               // Product IDs can be found at https://www.ontrak.net/Nodll.htm.
-
-#define COMMAND_SIZE   8       // ADU commands are 8 bytes in length
-</code></pre>
-
-<p>Next, let's declare our USB device handle. This handle will be used for all of our interactions with the USB device via hidapi (opening, closing, reading and writing commands). We'll also initialize the hidapi library and check the returned result.</p>
+							<p>First we'll import the hid library. If you haven't yet installed it, you may do so in the command line via <em>pip install hidaip</em> or by installing via requirements.txt.</p>
+							<p>We'll declare OnTrak's vendor ID and the product ID for the ADU device we wish to use (in our case 208 for ADU208).</p>
 
 <pre><code class="language-c">
-int main( int argc, char **argv )
-{
-	hid_device * handle;
-	int result;
+import hid
 
-	// Initialize the hidapi library
-	result = hid_init();
+VENDOR_ID = 0x0a07 # OnTrak Control Systems Inc. vendor ID
+PRODUCT_ID = 200 # ADU208 Device product name - change this to match your product
 </code></pre>
 
-<p>If initialization of hidapi was successful, we will now attempt to open the connected USB device that matches our vendor and product ID.</p>
+<p>In this example, we enumerate the connected USB devices by vendor ID. This will show us all connected OnTrak devices.</p>
 
 <pre><code class="language-c">
-	// Open the device using the VID, PID,
-	// and optionally the Serial number.
-	handle = hid_open( VENDOR_ID, PRODUCT_ID, NULL );
+def main():
+    print('Connected ADU devices:')
+    for d in hid.enumerate(VENDOR_ID):
+        print('    ADU{}'.format(d['product_id']))
+    print('')
+</code></pre>
 
-	if ( handle == NULL )
-	{
-		wprintf( L"Unable to open ADU device with product ID %i. Please check that it is connected. If it is connected, ensure you are running the example with root privileges such as with sudo.\n", PRODUCT_ID );
-		result = hid_exit();
-		exit( -1 );
-	}
+<p>Next, we'll open the connected USB device that matches our vendor and product ID. This device will be used for all of our interactions with the ADU via hidapi (opening, closing, reading and writing commands).</p>
+
+<pre><code class="language-c">
+    try:
+        device = hid.device()
+        device.open(VENDOR_ID, PRODUCT_ID)
+        print('Connected to ADU{}\n'.format(PRODUCT_ID))
 </code></pre>
 
 <p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
-	This is to clear any pending reads that was not initiated by us:</p>
+	This is to clear any pending reads that was not initiated by us. We'll review the read_adu function later on.</p>
 
 <pre><code class="language-c">
-    while ( 0 != read_from_adu( handle, &value, 200 ) )
-    {
-    }
+        # clear the read buffer of any unread values
+        # this is important so that we don't read old values from previous requests sent to the device
+        while True:
+            if read_adu(device, 200) == None:
+                break
 </code></pre>
 
 <p>Now that we have successfully opened our device, we can write commands to the ADU device and read the result.</p>
 <p>Two convenience functions have been written to help properly format command packets to send to the ADU device, as well as to read a result from the ADU device: write_to_adu() and read_from_adu(). We'll cover the internals of these functions at the end of this page.</p>
 
 <pre><code class="language-c">
-	// write_to_adu() return the number of bytes written, or -1 on failure
-	result = write_to_adu( handle, "RK0" ); // reset relay 0
-    result = write_to_adu( handle, "SK0" ); // close relay 0
+        # write_to_adu() returns the number of bytes written on success, and None on failure
+        bytes_written = write_to_adu(device, 'RK0') # set relay 0, note: device does not send a response for this
+        bytes_written = write_to_adu(device, 'SK0') # reset relay 0
 </pre></code>
 
 <p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
-<p>read_from_adu() takes two parameters, the device object, and a timeout in milliseconds. </p>
+<p>We can then use read_from_adu() to read the result. read_from_adu() returns the data read in integer format on success, and None on failure. A timeout is supplied for the maximum amount of time that the host (computer) will wait for data from the read request.</p>
 
 <pre><code class="language-c">
-	// Send a command to request the value of relay 0. We'll need to read the result using read_from_adu() 
-	result = write_to_adu( handle, "RPK0" );
+		bytes_written = write_to_adu(device, 'RPK0') # request the status or relay 0
 
-	// Read the result (should be 1 since we closed the relay with 'SK0' command)
-	if ( -1 != read_from_adu( handle, &value, 200 ) )
-	{
-		wprintf( L"Read value: %i\n", value );
-	}
+        # read_from_adu() returns the data read in integer format on success, and None on failure
+        data = read_from_adu(device, 200) # read the response from above RPK0 request
+        print('Received: {}'.format(data))
 </pre></code>
 
-<p>Since we are finished with the device, we should close the device and shutdown the hidapi library.</p>
+<p>Since we are finished with the device, we should close the device.</p>
 
 <pre><code class="language-c">
-	// Close the device
-	hid_close( handle );
-
-	// Finalize the hidapi library
-	result = hid_exit();
-
-    return 0;
-}
+		device.close()
 </code></pre>
 
 <p>If you're interested in the internals of write_to_adu() and read_from_adu() as well as how to structure a command packet, the details are below.</p>
@@ -229,89 +212,52 @@ int main( int argc, char **argv )
 	The number of bytes sent should match our command buffer's size (8 bytes)</p>
 
 <pre><code class="language-c">
-// Write a command to an ADU device by creating a command buffer based on the provided command string
-// Returns -1 on failure, number of bytes written on success
-int write_to_adu( hid_device * _handle, const char * _cmd )
-{
-	const int command_len = strlen( _cmd ); // Get the length of the command string we are sending
+def write_to_adu(dev, msg_str):
+    print('Writing command: {}'.format(msg_str))
 
-	// Buffer to hold the command we will send to the ADU device.
-	unsigned char buffer[ COMMAND_SIZE ];
-	int bytes_sent;
+    # message structure:
+    #   message is an ASCII string containing the command
+    #   8 bytes in length
+    #   0th byte must always be 0x01 (decimal 1)
+    #   bytes 1 to 7 are ASCII character values representing the command
+    #   remainder of message is padded to 8 bytes with character code 0
 
-	if ( command_len > COMMAND_SIZE - 1 )
-	{
-		printf( "Error: command is larger than our limit of %i\n", COMMAND_SIZE - 1 );
-		return -1;
-	}
+    byte_str = chr(0x01) + msg_str + chr(0) * max(7 - len(msg_str), 0)
 
-    // Message structure:
-    //   message is an ASCII string containing the command
-    //   8 bytes in length
-    //   0th byte must always be 0x01 (decimal 1)
-    //   bytes 1 to 7 are ASCII character values representing the command
-    //   remainder of message is padded to 8 bytes with character code 0
+    try:
+        num_bytes_written = dev.write(byte_str.encode())
+    except IOError as e:
+        print ('Error writing command: {}'.format(e))
+        return None 
 
-	memset( buffer, 0, COMMAND_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
-
-	buffer[ 0 ] = 0x01; // First byte of the command buffer needs to be set to a decimal value of 1
-
-	// Copy the command ASCII bytes into our buffer, starting at the second byte (we need to leave the first byte as decimal value 1)
-	memcpy( &buffer[ 1 ], _cmd, command_len );
-
-	// Attempt to write the command to the device
-	bytes_sent = hid_write( _handle, buffer, COMMAND_SIZE );
-
-	if ( bytes_sent == -1 ) // Was the write successful?
-	{
-		wprintf( L"Error writing to device: %s\n", hid_error( _handle ) );
-	}
-
-	return bytes_sent;
-}
+    return num_bytes_written
 </pre></code>
 
-<p>If the interrupt transfer succeeds, we should now have a result to read from the command we sent. We can use hid_read_timeout() to 
-	read the value. The parameters are the same as for sending, plus a timeout value. The buffer in this case will contain the 
-data read from the device and bytes_read will contain the number of bytes that were read and stored in the buffer.</p>
+<p>If the write, we should now have a result to read from the command we sent. We can use hid.device.read() to read the value.
+	The arguments are the maximum number of bytes to read and a timeout. read() should return the data read from the device.</p>
 
 <p>If reading from the device was successful, let's extract the data we are interested in. It's important to note 
 that the data returned is 8 bytes in length. The first byte of the data returned is 0x01 and is followed by an ASCII representation
-of the number. The remainder of the bytes are padded with 0x00 (NULL) values. The ASCII value will need to be converted to an integer.
-This can be done using the  C atoi() function (ASCII to Integer).</p>
+of the number. The remainder of the bytes are padded with 0x00 (NULL) values. We can construct a string from the second byte to the eigth byte
+and strip out the null '\x00' characters. The ASCII value is then converted to an integer and returned.
 
 <pre><code class="language-c">
-// Read a command from an ADU device with a specified timeout
-int read_from_adu( hid_device * _handle, int * _read_value, int _timeout )
-{
-	int bytes_read;
+def read_from_adu(dev, timeout):
+	try:
+        # read a maximum of 8 bytes from the device, with a user specified timeout
+        data = dev.read(8, timeout)
+    except IOError as e:
+        print ('Error reading response: {}'.format(e))
+        return None
 
-	// Buffer to hold the command we will receive from the ADU device
-	// Its size is set to the transfer size for low or full speed USB devices (ADU model specific - see defines at top of file)
-	unsigned char buffer[ COMMAND_SIZE ];
-	memset( buffer, 0, COMMAND_SIZE ); // Zero out buffer to pad with null values (command buffer needs to be padded with 0s)
+    byte_str = ''.join(chr(n) for n in data[1:]) # construct a string out of the read values, starting from the 2nd byte
 
-	// Attempt to read the result from the device
-	bytes_read = hid_read_timeout( _handle, buffer, COMMAND_SIZE, _timeout );
+	result_str = byte_str.split('\x00',1)[0] # remove the trailing null '\x00' characters
 
-	if ( bytes_read == -1 ) // Was the interrupt transfer successful?
-	{
-		wprintf( L"Error reading interrupt transfer: %s\n", hid_error( _handle ) );
-	}
+    if len(result_str) == 0:
+        return None
 
-	// Our buffer should now hold the data read from the ADU device. The first byte will contain what is known as
-
-
-	// The data we are interested in follows in ASCII form. We will need to convert the ASCII data to an integer
-	// in order for it to be usable to us in a numeric format. The buffer is null terminated, and as such atoi()
-	// can be used for this.
-
-	// Convert the ASCII string result stored in the buffer's 2nd index and onward from a string to an integer
-	// and store it in the read_value pointer user argument
-	* _read_value = atoi( (const char *)& buffer[ 1 ] );
-
-	return bytes_read; // returns 0 on success, a negative number specifying the libusb error otherwise
-}
+    return int(result_str) # convert the resulting string to an integer and return
 </code></pre>
 
 
