@@ -1,0 +1,239 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="en-ca" http-equiv="Content-Language" />
+<meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
+<!--ONTRAKS META TAGS FOR SEARCH ENGINE -->
+<meta Name="keywords" content="acquisition, python, adu, hid, linux, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, automation, interface, serial, windows" />
+<meta Name="description" content=" Guide to using Python and the AduHid module with USB based Data Acquisition products on Windows"/>
+<!-- ********************************** -->
+
+<link rel="stylesheet" type="text/css" href="ontrak.css" />
+<title>Using C and libusb with ADU USB Data Acquisition Products (Linux & Windows)</title>
+
+<link rel="stylesheet" type="text/css" href="css/ontrak.css">
+<link rel="stylesheet" type="text/css" href="css/ontrakCompat.css">
+<script>var isProgrammingPage = true;</script>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script src="js/externalLoad.js"></script>
+<link href="css/prism.css" rel="stylesheet" />
+
+
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-30278418-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+
+
+
+<style type="text/css">
+.auto-style16 {
+	font-size: small;
+}
+.auto-style17 {
+	font-size: 18px;
+	color: #5E5E5E;
+}
+.auto-style18 {
+	font-family: Arial;
+	font-size: small;
+	font-weight: normal;
+	color: #000000;
+	height: auto;
+	text-align: left;
+}
+</style>
+
+
+
+</head>
+
+<body style="margin: 0; background-color: #FFFFFF">
+<script src="js/prism.js"></script>
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_header"></div>
+<!------------------------------------------->
+				
+<div class="contentMain pSpaceFix">
+
+<table align="left" cellpadding="0" cellspacing="0" class="ontrakZTableSetup" style="width: 1024px">
+	<tr>
+		<td valign="top">&nbsp;&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+		<table cellpadding="0" cellspacing="0" style="width: 1000px">
+			<tr>
+				<td>
+				
+
+				</td>
+			</tr>
+			<tr>
+				<td>&nbsp;&nbsp; &nbsp;</td>
+			</tr>
+			<tr>
+				<td>
+				<table cellspacing="1" style="width: 100%">
+					<tr class="ontrakSectionTitle_B">
+						<td class="ontrakHeading_02">
+    <font face="Arial"><strong><span class="auto-style1">Using Python and the aduhid module with ADU USB Data
+    Acquisition Products (Windows)</span></strong></font></td>
+					</tr>
+					<tr>
+						<td class="auto-style18">
+    <p>
+	<img alt="" height="92" src="Eds/Products/ADU200s.jpg" width="156" /> 
+	<a href="products.htm"><big><font
+    face="Arial">View the ADU series of USB based Data Acquisition Products</font></big></a></p>
+    <h3><br>
+    Introduction</h3>
+						<hr />
+						<p>Communicating with USB devices via software involves a few 
+						simple steps. Unlike RS232 based devices which are 
+						connected to physical COM ports, USB devices are 
+						assigned a logical<strong> </strong><em><strong>handle</strong></em> 
+						by operating systems when they are first plugged in. 
+						This process is known as <em><strong>enumeration</strong></em>. 
+						Once a USB device has been<em><strong> </strong></em>
+						enumerated, it is ready for use by the host computer 
+						software. For the host application software to 
+						communicate with the USB device, it must first obtain 
+						the handle assigned to the USB device during the 
+						enumeration process. The handle can be obtained using an 
+						<em><strong>open function</strong></em> along with 
+						some specific information about the USB device. 
+						Information that can be used to obtain a handle to a USB 
+						device include, <em><strong>serial number</strong></em>, 
+						<strong><em>product ID</em></strong>, or <strong><em>vendor 
+                        ID</em></strong>.
+                        
+                        <p>Once we obtain a USB device handle, we can read and write information to and from the USB device via our application.
+                         Once the application has finished
+						with all communication with the USB device, the handle 
+						is closed. The handle is generally closed when the 
+						application terminates.</p>
+						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Windows using Python and the aduhid module. Basics of opening a USB device handle, writing and reading data, as well as closing the handle is provided as an example.
+                        The aduhid module calls functions from AduHid.dll in order to interface with the devices.
+                        </font></p>
+                        <p><font face="Arial">
+    All source code is provided so that you may review details that
+    are not highlighted here.</font></p>
+						<hr />
+						<h3>
+						Lets have a look at the code......</h3>
+						<hr/>
+
+						<p>We'll first enumerate the devices and print out the vendor id, product id and serial number belonging to each ADU.</p>
+
+<pre><code class="language-python">
+from ontrak import aduhid
+
+# Get a device list of connected ADUs. List will be empty if no devices are connected.
+device_list = aduhid.device_list(100)
+for device in device_list:
+	print('Vendor ID: %i, Product ID: %i, Serial Number: %s' % (device.vendor_id, device.product_id, device.serial_number))
+</code></pre>
+
+<p>We could then use one of these product ids or serial numbers to open the desired device via aduhid.open_device_by_product_id() or aduhid.open_device_by_serial_number().</p>
+<p>However, if we would rather select the product from a GUI popup, we can call the aduhid.show_device_list() as below:</p>
+
+<pre><code class="language-python">
+# Show the device list in a windows GUI popup. Return information on the selected device
+selected_device_info = aduhid.show_device_list('Line 1\nLine 2')
+</code></pre>
+
+<p>A structure containing the selected device will be returned to us (or None if no device selected). To keep things brief, we aren't validating return values in this example, though you should verify return values in production.</p>
+<p>We can now open the device using the serial number. It's preferred to use the serial number over a product id to open a device. This protects against having two devices of the same product type connected (their serial numbers will be unique).</p>
+
+<pre><code class="language-python">
+# Open the device selected in the list
+device_handle = aduhid.open_device_by_serial_number(selected_device_info.serial_number, 100)
+</code></pre>
+
+<p>Now that we have successfully opened our device, we can write commands to the ADU device and read the result.</p>
+<p>First, let's write some commands:</p>
+
+<pre><code class="language-python">
+# Write a command to the device
+result = aduhid.write_device(device_handle, 'RK0', 100)
+print('Write result: %i' % result) # Should be non-zero if successful
+
+result = aduhid.write_device(device_handle, 'SK0', 100)
+print('Write result: %i' % result) # Should be non-zero if successful
+</pre></code>
+
+<p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
+<p>We can then use read_from_adu() to read the result. read_from_adu() returns the data read in integer format on success, and None on failure. A timeout is supplied for the maximum amount of time that the host (computer) will wait for data from the read request.</p>
+
+<pre><code class="language-python">
+result = aduhid.write_device(device_handle, 'RPK0', 100)
+print('Write result: %i' % result) # Should be non-zero if successful
+
+# Read from device
+(result, value) = aduhid.read_device(device_handle, 100)	
+
+# Result should non-zero if successful, value will contain the returned value from the device in integer form 
+# If read is not successful, result is 0 and value is None
+if result != 0:
+	print('Read result: %i, value: %i' % (result, value)) 
+else:
+	print('Read failed - was a resulting command issued prior to the read?')
+</pre></code>
+
+<p>We are now finished with the device and it should be closed.</p>
+
+<pre><code class="language-python">
+aduhid.close_device(device_handle)
+</code></pre>
+
+
+						<hr />
+						<p><big><font face="Arial"><a href="windows_python_dll_example.zip">DOWNLOAD&nbsp;Windows Python DLL Example</a></font></big></p>
+						<hr />
+						<p class="ontrakZTableSetup1">
+						<br />
+						</p>
+    					</td>
+					</tr>
+				</table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+				
+</td>
+			</tr>
+			</table>
+		</td>
+		<td valign="top">&nbsp;&nbsp; </td>
+	</tr>
+	<tr>
+		<td valign="top">&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+
+		&nbsp;</td>
+		<td valign="top">&nbsp;</td>
+	</tr>
+</table>
+
+</div>
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_footer"></div>
+<!------------------------------------------->
+
+</body>
+
+</html>
