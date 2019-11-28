@@ -139,7 +139,7 @@
 							<p>First we'll import the hid library. If you haven't yet installed it, you may do so in the command line via <em>pip install hidaip</em> or by installing via requirements.txt.</p>
 							<p>We'll declare OnTrak's vendor ID and the product ID for the ADU device we wish to use (in our case 208 for ADU208).</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 import hid
 
 VENDOR_ID = 0x0a07 # OnTrak Control Systems Inc. vendor ID
@@ -148,7 +148,7 @@ PRODUCT_ID = 200 # ADU208 Device product name - change this to match your produc
 
 <p>In this example, we enumerate the connected USB devices by vendor ID. This will show us all connected OnTrak devices.</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 def main():
     print('Connected ADU devices:')
     for d in hid.enumerate(VENDOR_ID):
@@ -158,7 +158,7 @@ def main():
 
 <p>Next, we'll open the connected USB device that matches our vendor and product ID. This device will be used for all of our interactions with the ADU via hidapi (opening, closing, reading and writing commands).</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 	device = hid.device()
 	device.open(VENDOR_ID, PRODUCT_ID)
 	print('Connected to ADU{}\n'.format(PRODUCT_ID))
@@ -167,7 +167,7 @@ def main():
 <p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
 	This is to clear any pending reads that was not initiated by us. We'll review the read_adu function later on.</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 # clear the read buffer of any unread values
 # this is important so that we don't read old values from previous requests sent to the device
 while True:
@@ -178,7 +178,7 @@ while True:
 <p>Now that we have successfully opened our device, we can write commands to the ADU device and read the result.</p>
 <p>Two convenience functions have been written to help properly format command packets to send to the ADU device, as well as to read a result from the ADU device: write_to_adu() and read_from_adu(). We'll cover the internals of these functions at the end of this page.</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 	# write_to_adu() returns the number of bytes written on success, and None on failure
 	bytes_written = write_to_adu(device, 'RK0') # set relay 0, note: device does not send a response for this
 	bytes_written = write_to_adu(device, 'SK0') # reset relay 0
@@ -187,7 +187,7 @@ while True:
 <p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
 <p>We can then use read_from_adu() to read the result. read_from_adu() returns the data read in integer format on success, and None on failure. A timeout is supplied for the maximum amount of time that the host (computer) will wait for data from the read request.</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 		bytes_written = write_to_adu(device, 'RPK0') # request the status or relay 0
 
         # read_from_adu() returns the data read in integer format on success, and None on failure
@@ -197,7 +197,7 @@ while True:
 
 <p>Since we are finished with the device, we should close the device.</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 		device.close()
 </code></pre>
 
@@ -210,7 +210,7 @@ while True:
 <p>We'll use hid_write() to write our command to the device. After sending, we check to result to make sure the transfer succeeded. 
 	The number of bytes sent should match our command buffer's size (8 bytes)</p>
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 def write_to_adu(dev, msg_str):
     print('Writing command: {}'.format(msg_str))
 
@@ -240,7 +240,7 @@ that the data returned is 8 bytes in length. The first byte of the data returned
 of the number. The remainder of the bytes are padded with 0x00 (NULL) values. We can construct a string from the second byte to the eigth byte
 and strip out the null '\x00' characters. The ASCII value is then converted to an integer and returned.
 
-<pre><code class="language-c">
+<pre><code class="language-python">
 def read_from_adu(dev, timeout):
 	try:
         # read a maximum of 8 bytes from the device, with a user specified timeout
