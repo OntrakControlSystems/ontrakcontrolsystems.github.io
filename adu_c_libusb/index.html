@@ -164,10 +164,12 @@
 int main( int argc, char **argv )
 {
     struct libusb_device_handle * device_handle = NULL; // Our ADU's USB device handle
+	char value_str[8]; // 8-byte buffer to store string values read from device (7 byte string + NULL terminating character)
+    int result;
 
     // Initialize libusb
     int result = libusb_init( NULL );
-    if ( result < 0 )
+    if ( result &lt 0 )
     {
         printf( "Error initializing libusb: %s\n", libusb_error_name( result ) );
         exit( -1 );
@@ -201,7 +203,7 @@ int main( int argc, char **argv )
 <pre><code class="language-c">
     // Claim interface 0 on the device
     result = libusb_claim_interface( device_handle, 0 );
-    if ( result < 0 )
+    if ( result &lt 0 )
     {
         printf( "Error claiming interface: %s\n", libusb_error_name( result ) );
         if ( device_handle )
@@ -213,15 +215,6 @@ int main( int argc, char **argv )
         exit( -3 );
 	}
 	
-</code></pre>
-
-<p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
-	This is to clear any pending reads that was not initiated by us:</p>
-
-<pre><code class="language-c">
-    while ( 0 == read_from_adu( device_handle, &value, 200 ) )
-    {
-    }
 </code></pre>
 
 <p>Now that we have successfully opened our device and specified the interface we wish to use, we can use interrupt transfers to write commands to the ADU device and read the result.</p>
@@ -270,6 +263,18 @@ int main( int argc, char **argv )
 }
 </code></pre>
 
+<h3>Further Details</h3>
+<hr/>
+
+<p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
+	This is to clear any pending reads that was not initiated by us:</p>
+
+<pre><code class="language-c">
+    while ( 0 == read_from_adu( device_handle, value, 200 ) )
+    {
+    }
+</code></pre>
+
 <p>If you're interested in the internals of write_to_adu() and read_from_adu() as well as how to structure a command packet, the details are below.</p>
 
 <p>All ADU commands have their first byte set to 0x01 and the following bytes contain the ASCII representation of the command. 
@@ -313,7 +318,7 @@ int write_to_adu( libusb_device_handle * _device_handle, const char * _cmd, int 
     int result = libusb_interrupt_transfer( _device_handle, 0x01, buffer, TRANSFER_SIZE, &bytes_sent, _timeout );
     printf( "Write '%s' result: %i, Bytes sent: %u\n", _cmd, result, bytes_sent );
 
-    if ( result < 0 ) // Was the interrupt transfer successful?
+    if ( result &lt 0 ) // Was the interrupt transfer successful?
     {
         printf( "Error sending interrupt transfer: %s\n", libusb_error_name( result ) );
     }
@@ -328,14 +333,18 @@ with the ENDPOINT_IN endpoint to read the value. The parameters are the same as 
 data read from the device and bytes_read will contain the number of bytes that were read and stored in the buffer.</p>
 
 <p>If reading from the device was successful, let's extract the data we are interested in. It's important to note 
-that the data returned is 8 bytes in length. The first byte of the data returned is 0x01 and is followed by an ASCII representation
-of the number. The remainder of the bytes are padded with 0x00 (NULL) values. The ASCII value will need to be converted to an integer.
-This can be done using the  C atoi() function (ASCII to Integer).</p>
+that the data we are interested in is the first 8 bytes of the data read from the device. The first byte 0x01 and is 
+followed by an ASCII representation of the number. The remainder of the bytes are padded with 0x00 (NULL) values.</p>
 
 <pre><code class="language-c">
 // Read a command from an ADU device with a specified timeout
-int read_from_adu( libusb_device_handle * _device_handle, int * _read_value, int _timeout )
+int read_from_adu( libusb_device_handle * _device_handle, char * _read_str, int _read_str_len, int _timeout )
 {
+	if ( _read_str == NULL || _read_str_len &lt 8 )
+	{
+		return -2;
+	}
+    
     int bytes_read = 0;
 
     // Buffer to hold the command we will receive from the ADU device
@@ -348,25 +357,22 @@ int read_from_adu( libusb_device_handle * _device_handle, int * _read_value, int
     int result = libusb_interrupt_transfer( _device_handle, 0x81, buffer, TRANSFER_SIZE, &bytes_read, _timeout );
     printf( "Read result: %i, Bytes read: %u\n", result, bytes_read );
 
-    if ( result < 0 ) // Was the interrupt transfer successful?
+    if ( result &lt 0 ) // Was the interrupt transfer successful?
     {
         printf( "Error reading interrupt transfer: %s\n", libusb_error_name( result ) );
         return result;
     }
 
-    // Our buffer should now hold the data read from the ADU device. The first byte will be a value of decimal 1.
-    // The data we are interested in follows in ASCII form. We will need to convert the ASCII data to an integer
-    // in order for it to be usable to us in a numeric format. The buffer is null terminated, and as such atoi()
-    // can be used for this.
-
-    // Convert the ASCII string result stored in the buffer's 2nd index and onward from a string to an integer
-    // and store it in the read_value pointer user argument
-    *_read_value = atoi( (const char *)&buffer[1] );
+	// The buffer should now hold the data read from the ADU device. The first byte will contain 0x01, the remaining bytes
+	// are the returned value in string format. Let's copy the string from the read buffer, starting at index 1, to our _read_str buffer 
+	memcpy( _read_str, &buffer[1], 7 );
+	buffer[7] = '\0'; // null terminate the string
 
     return result; // returns 0 on success, a negative number specifying the libusb error otherwise
 }
 </code></pre>
 
+<hr />
 
 <p>This example illustrates the basics of reading and writing to ADU devices using libusb, interrupt transfers, and endpoints.</p>
 <p>In a larger application, you may want to use libusb's asynchronous interface as to not block the application. 
@@ -375,9 +381,7 @@ More information can be found here: <a href="http://libusb.sourceforge.net/api-1
 
 <p><strong>NOTE:</strong> When running the example, it must be run with root privileges in order to access the USB device.</p>
 
-
-						<hr />
-						<p><big><font face="Arial"><a href="linux_libusb_example.zip">DOWNLOAD&nbsp;Linux C Example</a></font></big></p>
+						<p><big><font face="Arial"><a href="adu_c_libusb_linux.zip">DOWNLOAD C libusb Example (Linux)</a></font></big></p>
 						<hr />
 						<p class="ontrakZTableSetup1">
 						<br />

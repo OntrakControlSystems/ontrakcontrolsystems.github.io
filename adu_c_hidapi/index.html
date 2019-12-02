@@ -153,7 +153,8 @@
 int main( int argc, char **argv )
 {
 	hid_device * handle;
-	int result;
+	char value_str[8]; // 8-byte buffer to store string values read from device (7 byte string + NULL terminating character)
+	int result; // HIDAPI function call result
 
 	// Initialize the HIDAPI library
 	result = hid_init();
@@ -174,15 +175,6 @@ int main( int argc, char **argv )
 	}
 </code></pre>
 
-<p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
-	This is to clear any pending reads that was not initiated by us:</p>
-
-<pre><code class="language-c">
-    while ( 0 != read_from_adu( handle, &value, 200 ) )
-    {
-    }
-</code></pre>
-
 <p>Now that we have successfully opened our device, we can write commands to the ADU device and read the result.</p>
 <p>Two convenience functions have been written to help properly format command packets to send to the ADU device, as well as to read a result from the ADU device: write_to_adu() and read_from_adu(). We'll cover the internals of these functions at the end of this page.</p>
 
@@ -192,17 +184,26 @@ int main( int argc, char **argv )
     result = write_to_adu( handle, "SK0" ); // close relay 0
 </pre></code>
 
-<p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
-<p>read_from_adu() takes two parameters, the device object, and a timeout in milliseconds. </p>
+<p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU200 is RPA. This requests the value of PORT A in binary.</p>
+<p>read_from_adu() takes four parameters, the device object, a destination buffer to store the string result, the length of this buffer (must be 8 bytes or larger), and a timeout in milliseconds. </p>
 
 <pre><code class="language-c">
-	// Send a command to request the value of relay 0. We'll need to read the result using read_from_adu() 
-	result = write_to_adu( handle, "RPK0" );
+	// Send a command to request the value PORT A. We'll need to read the result using read_from_adu() 
+	result = write_to_adu( handle, "RPA" );
 
-	// Read the result (should be 1 since we closed the relay with 'SK0' command)
-	if ( -1 != read_from_adu( handle, &value, 200 ) )
+	// Read the result into our 8 byte value_str buffer that we declared at the beginning of main()
+	if ( -1 != read_from_adu( handle, value_str, 8, 200 ) )
 	{
-		wprintf( L"Read value: %i\n", value );
+		wprintf( L"Read value as string: %s\n", value_str );
+
+		// The data we are interested in follows in ASCII form. We will need to convert the ASCII data to an integer
+		// in order for it to be usable to us in a numeric format. The buffer is null terminated, and as such atoi()
+		// can be used for this.
+
+		// Convert the ASCII string result stored in the buffer's 2nd index and onward from a string to an integer
+		// and store it in the read_value pointer user argument
+		int value_int = atoi( value_str );
+		wprintf( L"Read value as int: %i\n", value_int );
 	}
 </pre></code>
 
@@ -217,6 +218,17 @@ int main( int argc, char **argv )
 
     return 0;
 }
+</code></pre>
+
+<h3>Further Details</h3>
+<hr/>
+<p> When newly connecting to a device, we should also read until there is nothing left to read from the device. 
+	This is to clear any pending reads that was not initiated by us:</p>
+
+<pre><code class="language-c">
+    while ( 0 != read_from_adu( handle, &value, 200 ) )
+    {
+    }
 </code></pre>
 
 <p>If you're interested in the internals of write_to_adu() and read_from_adu() as well as how to structure a command packet, the details are below.</p>
@@ -277,13 +289,18 @@ data read from the device and bytes_read will contain the number of bytes that w
 
 <p>If reading from the device was successful, let's extract the data we are interested in. It's important to note 
 that the data returned is 8 bytes in length. The first byte of the data returned is 0x01 and is followed by an ASCII representation
-of the number. The remainder of the bytes are padded with 0x00 (NULL) values. The ASCII value will need to be converted to an integer.
-This can be done using the  C atoi() function (ASCII to Integer).</p>
+of the number. The remainder of the bytes are padded with 0x00 (NULL) values.</p>
 
 <pre><code class="language-c">
 // Read a command from an ADU device with a specified timeout
-int read_from_adu( hid_device * _handle, int * _read_value, int _timeout )
+// It is expected that _read_str is of size 8 bytes (or greater)
+int read_from_adu( hid_device * _handle, char * _read_str, int _read_str_len, int _timeout )
 {
+	if ( _read_str == NULL || _read_str_len &lt 8 )
+	{
+		return -1;
+	}
+
 	int bytes_read;
 
 	// Buffer to hold the command we will receive from the ADU device
@@ -299,28 +316,20 @@ int read_from_adu( hid_device * _handle, int * _read_value, int _timeout )
 		wprintf( L"Error reading interrupt transfer: %s\n", hid_error( _handle ) );
 	}
 
-	// Our buffer should now hold the data read from the ADU device. The first byte will contain what is known as
-
-
-	// The data we are interested in follows in ASCII form. We will need to convert the ASCII data to an integer
-	// in order for it to be usable to us in a numeric format. The buffer is null terminated, and as such atoi()
-	// can be used for this.
-
-	// Convert the ASCII string result stored in the buffer's 2nd index and onward from a string to an integer
-	// and store it in the read_value pointer user argument
-	* _read_value = atoi( (const char *)& buffer[ 1 ] );
+	// The buffer should now hold the data read from the ADU device. The first byte will contain 0x01, the remaining bytes
+	// are the returned value in string format. Let's copy the string from the read buffer, starting at index 1, to our _read_str buffer 
+	_read_str[7] = '\0';
+	memcpy( _read_str, &buffer[1], 7 );
 
 	return bytes_read; // returns 0 on success, a negative number specifying the libusb error otherwise
 }
 </code></pre>
 
-
+<hr />
 <p>This example illustrates the basics of reading and writing to ADU devices using the HIDAPI library.</p>
 
-<p><strong>NOTE:</strong> When running the example, it must be run with root privileges in order to access the USB device.</p>
+<p><strong>NOTE:</strong> When running the example, it must be run with root privileges in order to access the USB device. To compile the makefile for Linux or OS X use: <em>make -f Makefile-linux</em> or <em>make -f Makefile-osx.</em></p>
 
-
-						<hr />
 						<p><big><font face="Arial"><a href="adu_c_hidapi.zip">DOWNLOAD&nbsp;C HIDAPI Example (Linux and OS X)</a></font></big></p>
 						<hr />
 						<p class="ontrakZTableSetup1">
