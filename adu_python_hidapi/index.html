@@ -170,12 +170,13 @@ bytes_written = write_to_adu(device, 'SK0') # reset relay 0
 <p>We can then use read_from_adu() to read the result. read_from_adu() returns the data read in integer format on success, and None on failure. A timeout is supplied for the maximum amount of time that the host (computer) will wait for data from the read request.</p>
 
 <pre><code class="language-python">
-bytes_written = write_to_adu(device, 'PA') # request the status or PORT A
-data = read_from_adu(device, 200) # read the response from above PA request
-if data != None:
-	# convert the resulting string to an integer 
-	data_int = int(data)
-	print('Received: {}'.format(data_int))
+    bytes_written = write_to_adu(device, 'RPA') # request the status of PORT A in binary format
+
+    data = read_from_adu(device, 200) # read the response from above PA request
+    if data != None:
+		print('Received string: {}'.format(data))
+		# data_int = int(data) # if you wish to work with the data in integer format
+		# print( 'Received int: {}'.format(data_int))
 </pre></code>
 
 <p>Since we are finished with the device, we should close the device.</p>
@@ -191,7 +192,7 @@ if data != None:
 
 <p>All ADU commands have their first byte set to 0x01 and the following bytes contain the ASCII representation of the command. 
 	The ADU command packet format is described here: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm</a>. 
-	As described in the link, the remaining bytes in the command buffer must be null padded (0x00). We do this via a memset.</p>
+	As described in the link, the remaining bytes in the command buffer must be null padded (0x00).</p>
 
 <p>We'll use hid_write() to write our command to the device. After sending, we check to result to make sure the transfer succeeded. 
 	The number of bytes sent should match our command buffer's size (8 bytes)</p>
