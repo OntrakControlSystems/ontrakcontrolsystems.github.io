@@ -5,12 +5,12 @@
 <meta content="en-ca" http-equiv="Content-Language" />
 <meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
 <!--ONTRAKS META TAGS FOR SEARCH ENGINE -->
-<meta Name="keywords" content="acquisition, C, libusb, usb, linux, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, visual, basic automation, interface, serial, usb" />
-<meta Name="description" content=" Guide to using C and libusb with USB based Data Acquisition products on Linux"/>
+<meta Name="keywords" content="acquisition, C, libusb, usb, linux, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, HIDAPI, basic automation, interface, serial, usb" />
+<meta Name="description" content="Guide to using C and HIDAPI with USB based Data Acquisition products on Linux"/>
 <!-- ********************************** -->
 
 <link rel="stylesheet" type="text/css" href="ontrak.css" />
-<title>Using C and libusb with ADU USB Data Acquisition Products (Linux & Windows)</title>
+<title>Using C and HIDAPI with ADU USB Data Acquisition Products (Linux & Windows)</title>
 
 <link rel="stylesheet" type="text/css" href="css/ontrak.css">
 <link rel="stylesheet" type="text/css" href="css/ontrakCompat.css">
@@ -88,7 +88,7 @@
 				<table cellspacing="1" style="width: 100%">
 					<tr class="ontrakSectionTitle_B">
 						<td class="ontrakHeading_02">
-    <font face="Arial"><strong><span class="auto-style1">Using C and the hidapi library&nbsp; with ADU USB Data
+    <font face="Arial"><strong><span class="auto-style1">Using C and the HIDAPI library&nbsp; with ADU USB Data
     Acquisition Products (Linux & OS X)</span></strong></font></td>
 					</tr>
 					<tr>
@@ -134,20 +134,20 @@
 						<hr />
 						<h3>
 						Lets have a look at the code......</h3>
-                            <p><strong><em>hidapi</em></strong> is a C library that provides simple access to HID compliant USB devices (<a href="https://github.com/libusb/hidapi">https://github.com/libusb/hidapi</a>). We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
+                            <p><strong><em>HIDAPI</em></strong> is a C library that provides simple access to HID compliant USB devices (<a href="https://github.com/libusb/hidapi">https://github.com/libusb/hidapi</a>). We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
 						
 						<pre><code class="language-c">
 // libhidapi library must be available. It can be installed on Debian/Ubuntu using apt-get install libhiapi-dev
 #include "hidapi/hidapi.h"
 
 #define VENDOR_ID      0x0a07  // Ontrak vendor ID. This should never change
-#define PRODUCT_ID     208     // ADU208 product ID. Set this product ID to match your device.
+#define PRODUCT_ID     200     // ADU200 product ID. Set this product ID to match your device.
                                // Product IDs can be found at https://www.ontrak.net/Nodll.htm.
 
 #define COMMAND_SIZE   8       // ADU commands are 8 bytes in length
 </code></pre>
 
-<p>Next, let's declare our USB device handle. This handle will be used for all of our interactions with the USB device via hidapi (opening, closing, reading and writing commands). We'll also initialize the hidapi library and check the returned result.</p>
+<p>Next, let's declare our USB device handle. This handle will be used for all of our interactions with the USB device via HIDAPI (opening, closing, reading and writing commands). We'll also initialize the HIDAPI library and check the returned result.</p>
 
 <pre><code class="language-c">
 int main( int argc, char **argv )
@@ -155,11 +155,11 @@ int main( int argc, char **argv )
 	hid_device * handle;
 	int result;
 
-	// Initialize the hidapi library
+	// Initialize the HIDAPI library
 	result = hid_init();
 </code></pre>
 
-<p>If initialization of hidapi was successful, we will now attempt to open the connected USB device that matches our vendor and product ID.</p>
+<p>If initialization of HIDAPI was successful, we will now attempt to open the connected USB device that matches our vendor and product ID.</p>
 
 <pre><code class="language-c">
 	// Open the device using the VID, PID,
@@ -206,13 +206,13 @@ int main( int argc, char **argv )
 	}
 </pre></code>
 
-<p>Since we are finished with the device, we should close the device and shutdown the hidapi library.</p>
+<p>Since we are finished with the device, we should close the device and shutdown the HIDAPI library.</p>
 
 <pre><code class="language-c">
 	// Close the device
 	hid_close( handle );
 
-	// Finalize the hidapi library
+	// Finalize the HIDAPI library
 	result = hid_exit();
 
     return 0;
@@ -315,13 +315,13 @@ int read_from_adu( hid_device * _handle, int * _read_value, int _timeout )
 </code></pre>
 
 
-<p>This example illustrates the basics of reading and writing to ADU devices using the hidapi library.</p>
+<p>This example illustrates the basics of reading and writing to ADU devices using the HIDAPI library.</p>
 
 <p><strong>NOTE:</strong> When running the example, it must be run with root privileges in order to access the USB device.</p>
 
 
 						<hr />
-						<p><big><font face="Arial"><a href="linux_libusb_example.zip">DOWNLOAD&nbsp;Linux C Example</a></font></big></p>
+						<p><big><font face="Arial"><a href="adu_c_hidapi.zip">DOWNLOAD&nbsp;C HIDAPI Example (Linux and OS X)</a></font></big></p>
 						<hr />
 						<p class="ontrakZTableSetup1">
 						<br />
