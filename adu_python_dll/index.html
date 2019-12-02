@@ -6,7 +6,7 @@
 <meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
 <!--ONTRAKS META TAGS FOR SEARCH ENGINE -->
 <meta Name="keywords" content="acquisition, python, adu, hid, linux, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, automation, interface, serial, windows" />
-<meta Name="description" content=" Guide to using Python and the AduHid module with USB based Data Acquisition products on Windows"/>
+<meta Name="description" content=" Guide to using Python and the AduHid DLL module with USB based Data Acquisition products on Windows"/>
 <!-- ********************************** -->
 
 <link rel="stylesheet" type="text/css" href="ontrak.css" />
@@ -88,7 +88,7 @@
 				<table cellspacing="1" style="width: 100%">
 					<tr class="ontrakSectionTitle_B">
 						<td class="ontrakHeading_02">
-    <font face="Arial"><strong><span class="auto-style1">Using Python and the aduhid module with ADU USB Data
+    <font face="Arial"><strong><span class="auto-style1">Using Python and the AduHid DLL module with ADU USB Data
     Acquisition Products (Windows)</span></strong></font></td>
 					</tr>
 					<tr>
@@ -124,7 +124,7 @@
 						with all communication with the USB device, the handle 
 						is closed. The handle is generally closed when the 
 						application terminates.</p>
-						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Windows using Python and the aduhid module. Basics of opening a USB device handle, writing and reading data, as well as closing the handle is provided as an example.
+						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Windows using Python and the AduHid DLL module. Basics of opening a USB device handle, writing and reading data, as well as closing the handle is provided as an example.
                         The aduhid module calls functions from AduHid.dll in order to interface with the devices.
                         </font></p>
                         <p><font face="Arial">
@@ -135,31 +135,18 @@
 						Lets have a look at the code......</h3>
 						<hr/>
 
-						<p>We'll first enumerate the devices and print out the vendor id, product id and serial number belonging to each ADU.</p>
+<p>After importing the aduhid module, we can open an ADU device by product id or serial number via aduhid.open_device_by_product_id() or aduhid.open_device_by_serial_number().</p>
 
 <pre><code class="language-python">
 from ontrak import aduhid
 
-# Get a device list of connected ADUs. List will be empty if no devices are connected.
-device_list = aduhid.device_list(100)
-for device in device_list:
-	print('Vendor ID: %i, Product ID: %i, Serial Number: %s' % (device.vendor_id, device.product_id, device.serial_number))
-</code></pre>
+PRODUCT_ID = 200 # Set the product id to match your ADU device. See list here: https://www.ontrak.net/Nodll.htm
 
-<p>We could then use one of these product ids or serial numbers to open the desired device via aduhid.open_device_by_product_id() or aduhid.open_device_by_serial_number().</p>
-<p>However, if we would rather select the product from a GUI popup, we can call the aduhid.show_device_list() as below:</p>
-
-<pre><code class="language-python">
-# Show the device list in a windows GUI popup. Return information on the selected device
-selected_device_info = aduhid.show_device_list('Line 1\nLine 2')
-</code></pre>
-
-<p>A structure containing the selected device will be returned to us (or None if no device selected). To keep things brief, we aren't validating return values in this example, though you should verify return values in production.</p>
-<p>We can now open the device using the serial number. It's preferred to use the serial number over a product id to open a device. This protects against having two devices of the same product type connected (their serial numbers will be unique).</p>
-
-<pre><code class="language-python">
-# Open the device selected in the list
-device_handle = aduhid.open_device_by_serial_number(selected_device_info.serial_number, 100)
+# open device by product id
+device_handle = aduhid.open_device_by_product_id(PRODUCT_ID, 100)
+if device_handle == None:
+	print('Error opening device. Ensure that the product id is correct and that it is connected')
+	exit(-1)
 </code></pre>
 
 <p>Now that we have successfully opened our device, we can write commands to the ADU device and read the result.</p>
@@ -174,8 +161,8 @@ result = aduhid.write_device(device_handle, 'SK0', 100)
 print('Write result: %i' % result) # Should be non-zero if successful
 </pre></code>
 
-<p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU208 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
-<p>We can then use read_from_adu() to read the result. read_from_adu() returns the data read in integer format on success, and None on failure. A timeout is supplied for the maximum amount of time that the host (computer) will wait for data from the read request.</p>
+<p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU200 is RPA. This requests the value of PORT A in binary format.</p>
+<p>We can then use read_from_adu() to read the result. read_from_adu() returns the data read in string format on success, and None on failure. A timeout is supplied for the maximum amount of time that the host (computer) will wait for data from the read request.</p>
 
 <pre><code class="language-python">
 result = aduhid.write_device(device_handle, 'RPK0', 100)
@@ -198,9 +185,19 @@ else:
 aduhid.close_device(device_handle)
 </code></pre>
 
+<h3>Further Details</h3>
+<hr/>
+
+<p>If you would like to obtain the vendor id, product id and serial number belonging to each connected ADU, the aduhid.device_list() function may be used:</p>
+<pre><code class="language-python">
+# Get a device list of connected ADUs. List will be empty if no devices are connected.
+device_list = aduhid.device_list(100)
+for device in device_list:
+	print('Vendor ID: %i, Product ID: %i, Serial Number: %s' % (device.vendor_id, device.product_id, device.serial_number))
+</code></pre>
 
 						<hr />
-						<p><big><font face="Arial"><a href="windows_python_dll_example.zip">DOWNLOAD&nbsp;Windows Python DLL Example</a></font></big></p>
+						<p><big><font face="Arial"><a href="adu_python_dll.zip">DOWNLOAD&nbsp;Windows Python DLL Example</a></font></big></p>
 						<hr />
 						<p class="ontrakZTableSetup1">
 						<br />
