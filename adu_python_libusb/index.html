@@ -136,12 +136,10 @@
 						 The suggested way of working with ADU devices in Python and Linux is with the HIDAPI module (see: ). For working with Python and ADU devices in Windows, it's preferred to use the AduHid module (see: )
                         </font></p>
                         <p><font face="Arial">
-    All source code is provided so that you may review details that
-    are not highlighted here.</font></p>
+    All source code is provided so that you may review details that are not highlighted here.</font></p>
 						<hr />
 						<h3>
 						Lets have a look at the code......</h3>
-						<p><strong><em>libusb</em></strong> is a C library that provides generic access to USB devices. We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
 	
 <p>This example illustrates the basics of reading and writing to ADU devices using the libusb library.</p>
 <p><strong>NOTE:</strong> When running the example, it must be run with root privileges in order to access the USB device.</p>
