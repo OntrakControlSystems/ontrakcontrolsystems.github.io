@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="en-ca" http-equiv="Content-Language" />
+<meta content="text/html; charset=windows-1252" http-equiv="Content-Type" />
+<!--ONTRAKS META TAGS FOR SEARCH ENGINE -->
+<meta Name="keywords" content="acquisition, python, hidapi, libusb, linux, usb, usb communications, usb communications, A/D, D/A, I/O, digital, analog, visual, automation, interface, serial, usb" />
+<meta Name="description" content=" Guide to using Python and hidapi with USB based Data Acquisition products on Linux & OS X"/>
+<!-- ********************************** -->
+
+<link rel="stylesheet" type="text/css" href="ontrak.css" />
+<title>Using Python and libusb with ADU USB Data Acquisition Products (Linux & Windows)</title>
+
+<link rel="stylesheet" type="text/css" href="css/ontrak.css">
+<link rel="stylesheet" type="text/css" href="css/ontrakCompat.css">
+<script>var isProgrammingPage = true;</script>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script src="js/externalLoad.js"></script>
+<link href="css/prism.css" rel="stylesheet" />
+
+
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-30278418-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<!--$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+
+
+
+<style type="text/css">
+.auto-style16 {
+	font-size: small;
+}
+.auto-style17 {
+	font-size: 18px;
+	color: #5E5E5E;
+}
+.auto-style18 {
+	font-family: Arial;
+	font-size: small;
+	font-weight: normal;
+	color: #000000;
+	height: auto;
+	text-align: left;
+}
+</style>
+
+
+
+</head>
+
+<body style="margin: 0; background-color: #FFFFFF">
+<script src="js/prism.js"></script>
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_header"></div>
+<!------------------------------------------->
+				
+<div class="contentMain pSpaceFix">
+
+<table align="left" cellpadding="0" cellspacing="0" class="ontrakZTableSetup" style="width: 1024px">
+	<tr>
+		<td valign="top">&nbsp;&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+		<table cellpadding="0" cellspacing="0" style="width: 1000px">
+			<tr>
+				<td>
+				
+
+				</td>
+			</tr>
+			<tr>
+				<td>&nbsp;&nbsp; &nbsp;</td>
+			</tr>
+			<tr>
+				<td>
+				<table cellspacing="1" style="width: 100%">
+					<tr class="ontrakSectionTitle_B">
+						<td class="ontrakHeading_02">
+    <font face="Arial"><strong><span class="auto-style1">Using Python and the libusb library with ADU USB Data
+    Acquisition Products (Linux & Windows)</span></strong></font></td>
+					</tr>
+					<tr>
+						<td class="auto-style18">
+    <p>
+	<img alt="" height="92" src="Eds/Products/ADU200s.jpg" width="156" /> 
+	<a href="products.htm"><big><font
+    face="Arial">View the ADU series of USB based Data Acquisition Products</font></big></a></p>
+    <h3><br>
+    Introduction</h3>
+						<hr />
+						<p>Communicating with USB devices via software involves a few 
+						simple steps. Unlike RS232 based devices which are 
+						connected to physical COM ports, USB devices are 
+						assigned a logical<strong> </strong><em><strong>handle</strong></em> 
+						by operating systems when they are first plugged in. 
+						This process is known as <em><strong>enumeration</strong></em>. 
+						Once a USB device has been<em><strong> </strong></em>
+						enumerated, it is ready for use by the host computer 
+						software. For the host application software to 
+						communicate with the USB device, it must first obtain 
+						the handle assigned to the USB device during the 
+						enumeration process. The handle can be obtained using an 
+						<em><strong>open function</strong></em> along with 
+						some specific information about the USB device. 
+						Information that can be used to obtain a handle to a USB 
+						device include, <em><strong>serial number</strong></em>, 
+						<strong><em>product ID</em></strong>, or <strong><em>vendor 
+                        ID</em></strong>.
+                        
+                        <p>Once we obtain a USB device handle, we can read and write information to and from the USB device via our application.
+                         Once the application has finished
+						with all communication with the USB device, the handle 
+						is closed. The handle is generally closed when the 
+						application terminates.</p>
+
+                        <p>USB devices have defined <em><strong>interfaces</strong></em> which relate to their functionality. For example, a USB keyboard with built in LEDs may have an interface for sending key presses and an interface for controlling the lights on the keyboard. Interfaces as defined as a set of <em><strong>endpoints</strong></em>. Endpoints are used as communication channels to and from the device and host and can either be IN or OUT. They are defined relative to the host - OUT endpoints transport data to the device (write) and IN endpoints transport data to the host (read).</p> 
+                        
+                        <p>Once we obtain a USB device handle, we must <em><strong>claim the interface</strong></em> we want to use. This will allow us to read and write information to and from the USB device via our application. Once the application has finished 
+						with all communication with the USB device, the handle 
+						is closed. The handle is generally closed when the 
+						application terminates.</p> 
+
+						<p><font face="Arial">The sample source code outlines the basics of communicating directly with an ADU device on Linux and Windows using Python and libusb. Basics of opening a USB device handle, writing and reading data, as well as closing the handle of the ADU usb device is provided as an example.
+						 The suggested way of working with ADU devices in Python and Linux is with the HIDAPI module (see: ). For working with Python and ADU devices in Windows, it's preferred to use the AduHid module (see: )
+                        </font></p>
+                        <p><font face="Arial">
+    All source code is provided so that you may review details that
+    are not highlighted here.</font></p>
+						<hr />
+						<h3>
+						Lets have a look at the code......</h3>
+						<p><strong><em>libusb</em></strong> is a C library that provides generic access to USB devices. We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
+	
+<p>This example illustrates the basics of reading and writing to ADU devices using the libusb library.</p>
+<p><strong>NOTE:</strong> When running the example, it must be run with root privileges in order to access the USB device.</p>
+
+							<p><strong><em>libusb</em></strong> is a library that provides low level access to USB devices (<a href="https://pypi.org/project/libusb/">https://pypi.org/project/libusb/</a>). We will need a <strong><em>vendor ID and product ID</strong></em> in order to open the USB device. The VENDOR_ID define will always remain the same as this is OnTrak's USB vendor ID, however, PRODUCT_ID must be set to match the product that is connected via USB. See this link for a list of OnTrack product IDs: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm.</a></p>
+						
+							<p>First we'll import the libusb library. If you haven't yet installed it, you may do so in the command line via <em>pip install libusb</em> or by installing via requirements.txt (<em>pip install -r requirements.txt</em>).</p>
+							<p>We'll declare OnTrak's vendor ID and the product ID for the ADU device we wish to use (in our case 200 for ADU200).</p>
+
+<pre><code class="language-python">
+import usb.core
+import usb.backend.libusb1
+
+VENDOR_ID = 0x0a07 # OnTrak Control Systems Inc. vendor ID
+PRODUCT_ID = 200 # ADU200 Device product name - change this to match your product
+</code></pre>
+
+<p>Next, we'll open the connected USB device that matches our vendor and product ID. This device will be used for all of our interactions with the ADU via libusb (opening, closing, reading and writing commands).</p>
+
+<pre><code class="language-python">
+device = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
+
+if device is None:
+    raise ValueError('ADU Device not found. Please ensure it is connected to the tablet.')
+    sys.exit(1)
+
+# Claim interface 0 - this interface provides IN and OUT endpoints to write to and read from
+usb.util.claim_interface(device, 0)
+</code></pre>
+
+<p>Now that we have successfully opened our device and claimed an interface, we can write commands to the ADU device and read the result.</p>
+<p>Two convenience functions have been written to help properly format command packets to send to the ADU device, as well as to read a result from the ADU device: write_to_adu() and read_from_adu(). We'll cover the internals of these functions at the end of this page.</p>
+
+<pre><code class="language-python">
+# Write commands to ADU
+bytes_written = write_to_adu(device, 'SK0') # set relay 0
+bytes_written = write_to_adu(device, 'RK0') # reset relay 0
+</pre></code>
+
+<p>In order to read from the ADU device, we can send a command that requests a return value (as defined in our product documentation). Such a command for the ADU200 is RPK0. This requests the value of relay 0, which we previously set with the RK0 and SK0 commands in the above code block.</p>
+<p>We can then use read_from_adu() to read the result. read_from_adu() returns the data read string format on success, and None on failure. A timeout is supplied for the maximum amount of time that the host (computer) will wait for data from the read request.</p>
+
+<pre><code class="language-python">
+# Read from the ADU
+bytes_written = write_to_adu(device, 'RPA') # request the value of PORT A in binary 
+
+data = read_from_adu(device, 200) # read from device with a 200 millisecond timeout
+
+print("Received string: {}".format(data))
+print("Received data as int: {}".format(int(data))) # the returned value is a string - we can convert it to a number (int) if we wish
+</pre></code>
+
+<p>Since we are finished with the device, we should any interfaces we have claimed (in our case interface 0) and then close the device.</p>
+
+<pre><code class="language-python">
+usb.util.release_interface(device, 0)
+device.close()
+</code></pre>
+
+<h3>Further Details</h3>
+<hr/>
+
+<p>If you're interested in the internals of write_to_adu() and read_from_adu() as well as how to structure a command packet, the details are below.</p>
+
+<p>All ADU commands have their first byte set to 0x01 and the following bytes contain the ASCII representation of the command. 
+	The ADU command packet format is described here: <a href="https://www.ontrak.net/Nodll.htm">https://www.ontrak.net/Nodll.htm</a>. 
+	As described in the link, the remaining bytes in the command buffer must be null padded (0x00).</p>
+
+<p>We'll use device.write() to write our command to the device.</p>
+
+<pre><code class="language-python">
+def write_to_adu(dev, msg_str):
+    print('Writing command: {}'.format(msg_str))
+
+    # message structure:
+    #   message is an ASCII string containing the command
+    #   8 bytes in length
+    #   0th byte must always be 0x01 (decimal 1)
+    #   bytes 1 to 7 are ASCII character values representing the command
+    #   remainder of message is padded to 8 bytes with character code 0
+
+    byte_str = chr(0x01) + msg_str + chr(0) * max(7 - len(msg_str), 0)
+
+    num_bytes_written = 0
+
+	try:
+		# 0x01 is the OUT endpoint
+        num_bytes_written = dev.write(0x01, byte_str)
+    except usb.core.USBError as e:
+        print (e.args)
+
+    return num_bytes_written
+</pre></code>
+
+<p>If the write is successful, we should now have a result to read from the command we previously sent. We can use read_from_adu() to read the value. 
+	The arguments are the USB device and a timeout. device.read() should return the data read from the device.</p>
+
+<p>If reading from the device was successful, we will need to extract the data we are interested in. The first byte of the data returned is 0x01 and is followed by an ASCII representation
+of the number. The remainder of the bytes are padded with 0x00 (NULL) values. We can construct a string from the second byte to the end 
+and strip out the null '\x00' characters.
+
+<pre><code class="language-python">
+def read_from_adu(dev, timeout):
+    try:
+        data = dev.read(0x81, 64, timeout)
+    except usb.core.USBError as e:
+        print ("Error reading response: {}".format(e.args))
+        return None
+
+    byte_str = ''.join(chr(n) for n in data[1:]) # construct a string out of the read values, starting from the 2nd byte
+    result_str = byte_str.split('\x00',1)[0] # remove the trailing null '\x00' characters
+
+    if len(result_str) == 0:
+        return None
+
+    return result_str
+</code></pre>
+
+						<hr />
+						<p><big><font face="Arial"><a href="adu_python_libusb.zip">DOWNLOAD&nbsp;Linux & Windows Python libusb Example</a></font></big></p>
+						<hr />
+						<p class="ontrakZTableSetup1">
+						<br />
+						</p>
+    					</td>
+					</tr>
+				</table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+				
+</td>
+			</tr>
+			</table>
+		</td>
+		<td valign="top">&nbsp;&nbsp; </td>
+	</tr>
+	<tr>
+		<td valign="top">&nbsp;</td>
+		<td class="style2" valign="top" width="1000px">
+
+		&nbsp;</td>
+		<td valign="top">&nbsp;</td>
+	</tr>
+</table>
+
+</div>
+
+<!-- Header is automatically inserted here -->
+<div id="ontrak_footer"></div>
+<!------------------------------------------->
+
+</body>
+
+</html>
