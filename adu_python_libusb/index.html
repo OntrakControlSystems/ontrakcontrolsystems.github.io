@@ -190,8 +190,9 @@ bytes_written = write_to_adu(device, 'RPA') # request the value of PORT A in bin
 
 data = read_from_adu(device, 200) # read from device with a 200 millisecond timeout
 
-print("Received string: {}".format(data))
-print("Received data as int: {}".format(int(data))) # the returned value is a string - we can convert it to a number (int) if we wish
+if data != None:
+    print("Received string: {}".format(data))
+    print("Received data as int: {}".format(int(data))) # the returned value is a string - we can convert it to a number (int) if we wish
 </pre></code>
 
 <p>Since we are finished with the device, we should any interfaces we have claimed (in our case interface 0) and then close the device.</p>
@@ -246,6 +247,7 @@ and strip out the null '\x00' characters.
 <pre><code class="language-python">
 def read_from_adu(dev, timeout):
     try:
+		# try to read a maximum of 64 bytes from 0x81 (IN endpoint)
         data = dev.read(0x81, 64, timeout)
     except usb.core.USBError as e:
         print ("Error reading response: {}".format(e.args))
